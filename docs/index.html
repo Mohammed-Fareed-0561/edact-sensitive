@@ -39,6 +39,7 @@ redact('Card 4111 1111 1111 1111, key sk-abcdefghij1234567890abcd');
 <tr><td>API keys</td><td>GitHub, OpenAI, AWS, Slack tokens</td></tr>
 <tr><td>JWT &amp; private keys</td><td>eyJ… and PEM blocks</td></tr>
 <tr><td>SSN, IPv4, URL passwords</td><td>123-45-6789, 203.0.113.42, user:pass@host</td></tr>
+<tr><td>Indian PAN</td><td>ABCDE1234F → [PAN]</td></tr>
 </table>
 <h2>Why</h2>
 <p>Logs, error reports and support tickets routinely leak the data they were meant to debug. One <code>console.log(user)</code> can put an email, a token or a card number into a log store. This library is a one-line safety net: run untrusted text through it before logging, storing or sending it anywhere.</p>

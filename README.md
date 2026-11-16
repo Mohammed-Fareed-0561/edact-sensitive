@@ -77,11 +77,12 @@ findSensitive('mail a@b.com, card 4111111111111111');
 | JWT | `eyJ…` → `[TOKEN]` |
 | Private key blocks | `-----BEGIN PRIVATE KEY-----` → `[PRIVATE_KEY]` |
 | SSN | `123-45-6789` → `[SSN]` |
+| Indian PAN | `ABCDE1234F` → `[PAN]` |
 | IPv4 | `203.0.113.42` → `[IP]` |
 | URL passwords | `https://user:pass@host` → `https://user:[PASSWORD]@host` |
 | `key = value` secrets | `api_key = abc123…` → `api_key = [API_KEY]` |
 
-Credit cards are only redacted when they pass the Luhn check, so a random 16-digit order number is left alone. Phone numbers need at least 7 digits.
+Credit cards are only redacted when they pass the Luhn check, so a random 16-digit order number is left alone. Phone numbers need at least 7 digits. Indian PAN numbers are matched in their five-letter, four-digit, one-letter form.
 
 ## What this is not
 

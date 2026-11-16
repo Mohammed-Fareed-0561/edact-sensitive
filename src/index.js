@@ -84,6 +84,12 @@ const PATTERNS = [
     regex: /\b\d{3}-\d{2}-\d{4}\b/g,
   },
   {
+    name: 'indianPan',
+    label: '[PAN]',
+    // Indian Permanent Account Number: five letters, four digits, one letter.
+    regex: /\b[A-Z]{5}\d{4}[A-Z]\b/g,
+  },
+  {
     name: 'phone',
     label: '[PHONE]',
     // +1 555-123-4567, (555) 123-4567, 555-123-4567, +91 98765 43210
