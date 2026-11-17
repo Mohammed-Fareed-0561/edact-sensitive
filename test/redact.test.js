@@ -17,6 +17,23 @@ test('redacts a valid credit card but keeps a random 16-digit number that fails 
   assert.equal(redact('Order 1234567890123456'), 'Order 1234567890123456');
 });
 
+test('redacts a valid IBAN but keeps an IBAN-shaped string that fails the checksum', () => {
+  // Public example IBANs from ISO 13616 / bank documentation, not real accounts.
+  assert.equal(redact('Pay to DE89 3704 0044 0532 0130 00 today'), 'Pay to [IBAN] today');
+  assert.equal(redact('IBAN: GB82WEST12345698765432'), 'IBAN: [IBAN]');
+  assert.equal(redact('Product code AB12 CDEF GHIJ KLMN'), 'Product code AB12 CDEF GHIJ KLMN');
+});
+
+test('IBAN match stops at the country length, so a following word is not pulled in', () => {
+  assert.equal(redact('BE68 5390 0754 7034 CODE'), '[IBAN] CODE');
+  assert.equal(redact('NO93 8601 1117 947 ok'), '[IBAN] ok');
+});
+
+test('IBAN with an unknown country code is not reported, even with a valid checksum', () => {
+  // XX is not an IBAN country; check digits 46 make the mod-97 sum valid.
+  assert.deepEqual(findSensitive('XX46370400440532013000'), []);
+});
+
 test('redacts GitHub, OpenAI and AWS-style keys', () => {
   assert.equal(redact('token ghp_abcdefghij1234567890'), 'token [TOKEN]');
   assert.equal(redact('key sk-abcdefghij1234567890abcd'), 'key [API_KEY]');

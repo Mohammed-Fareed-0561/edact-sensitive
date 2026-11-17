@@ -28,6 +28,56 @@ function luhnValid(digits) {
   return digits.length >= 13 && sum % 10 === 0;
 }
 
+// IBAN length for each country in the SWIFT IBAN registry.
+const IBAN_LENGTHS = {
+  AD: 24, AE: 23, AL: 28, AT: 20, AX: 18, AZ: 28, BA: 20, BE: 16, BG: 22, BH: 22,
+  BI: 27, BR: 29, BY: 28, CH: 21, CR: 22, CY: 28, CZ: 24, DE: 22, DJ: 27, DK: 18,
+  DO: 28, EE: 20, EG: 29, ES: 24, FI: 18, FK: 18, FO: 18, FR: 27, GB: 22, GE: 22,
+  GF: 27, GI: 23, GL: 18, GP: 27, GR: 27, GT: 28, HN: 28, HR: 21, HU: 28, IE: 22,
+  IL: 23, IQ: 23, IS: 26, IT: 27, JO: 30, KW: 30, KZ: 20, LB: 28, LC: 32, LI: 21,
+  LT: 20, LU: 20, LV: 21, LY: 25, MC: 27, MD: 24, ME: 22, MF: 27, MK: 19, MN: 20,
+  MQ: 27, MR: 27, MT: 31, MU: 30, NC: 27, NI: 28, NL: 18, NO: 15, OM: 23, PF: 27,
+  PK: 24, PL: 28, PM: 27, PS: 29, PT: 25, QA: 29, RE: 27, RO: 24, RS: 22, RU: 33,
+  SA: 24, SC: 31, SD: 18, SE: 24, SI: 19, SK: 24, SM: 27, SO: 23, ST: 25, SV: 28,
+  TF: 27, TL: 23, TN: 24, TR: 26, UA: 29, VA: 22, VG: 24, WF: 27, XK: 20, YE: 30,
+  YT: 27,
+};
+
+// Build one alternative per length so a match stops exactly where the IBAN
+// ends. E.g. for 16 (BE): BE\d{2}(?: ?[A-Z0-9]{4}){3}, so in
+// "BE68 5390 0754 7034 CODE" the following word is never pulled in.
+function buildIbanRegex() {
+  const countriesByLength = {};
+  for (const [country, length] of Object.entries(IBAN_LENGTHS)) {
+    (countriesByLength[length] = countriesByLength[length] || []).push(country);
+  }
+  const alternatives = Object.entries(countriesByLength).map(([length, countries]) => {
+    const rest = Number(length) - 4;
+    const fullGroups = Math.floor(rest / 4);
+    const remainder = rest % 4;
+    return (
+      `(?:${countries.join('|')})\\d{2}(?: ?[A-Z0-9]{4}){${fullGroups}}` +
+      (remainder ? `(?: ?[A-Z0-9]{${remainder}})` : '')
+    );
+  });
+  return new RegExp(`\\b(?:${alternatives.join('|')})\\b`, 'g');
+}
+
+// ISO 13616 mod-97 check: move the first 4 chars to the end, turn letters
+// into numbers (A=10 ... Z=35), and the result mod 97 must equal 1.
+function ibanValid(match) {
+  const iban = match.replace(/ /g, '');
+  const rearranged = iban.slice(4) + iban.slice(0, 4);
+  let remainder = 0;
+  for (const ch of rearranged) {
+    const value = ch >= 'A' && ch <= 'Z' ? String(ch.charCodeAt(0) - 55) : ch;
+    for (const digit of value) {
+      remainder = (remainder * 10 + Number(digit)) % 97;
+    }
+  }
+  return remainder === 1;
+}
+
 const PATTERNS = [
   {
     name: 'urlPassword',
@@ -70,6 +120,15 @@ const PATTERNS = [
     name: 'jwt',
     label: '[TOKEN]',
     regex: /\beyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g,
+  },
+  {
+    name: 'iban',
+    label: '[IBAN]',
+    // DE89 3704 0044 0532 0130 00 or DE89370400440532013000. Exact length per
+    // country, then mod-97 checked below.
+    // Runs before creditCard and phone so their patterns don't grab the digit groups.
+    regex: buildIbanRegex(),
+    validate: ibanValid,
   },
   {
     name: 'creditCard',
