@@ -350,3 +350,26 @@ test('sensitive key names are not accepted as pattern filters', () => {
   assert.throws(() => redact('text', { only: ['password'] }), RangeError);
   assert.throws(() => redact('text', { except: ['password'] }), RangeError);
 });
+
+test('every PATTERNS entry matches the exported TypeScript shape', () => {
+  const { PATTERNS } = require('../src');
+  assert.ok(Array.isArray(PATTERNS));
+  assert.ok(PATTERNS.length > 0);
+  for (const pattern of PATTERNS) {
+    assert.equal(typeof pattern.name, 'string');
+    assert.equal(typeof pattern.label, 'string');
+    assert.ok(pattern.regex instanceof RegExp);
+    if (pattern.replacement !== undefined) {
+      assert.ok(typeof pattern.replacement === 'string' || typeof pattern.replacement === 'function');
+    }
+    if (pattern.labelFor !== undefined) assert.equal(typeof pattern.labelFor, 'function');
+    if (pattern.validate !== undefined) assert.equal(typeof pattern.validate, 'function');
+  }
+  // Spot-check the specialised entries the type has to cover.
+  const byName = Object.fromEntries(PATTERNS.map((p) => [p.name, p]));
+  assert.equal(typeof byName.urlPassword.replacement, 'string');
+  assert.equal(typeof byName.genericApiKey.replacement, 'function');
+  assert.equal(typeof byName.urlQuerySecret.labelFor, 'function');
+  assert.equal(typeof byName.authHeader.labelFor, 'function');
+  assert.equal(typeof byName.iban.validate, 'function');
+});
