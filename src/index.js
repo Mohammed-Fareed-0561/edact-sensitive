@@ -225,7 +225,23 @@ const PATTERNS = [
   },
 ];
 
+function validateOptions(options) {
+  if (!options.only && !options.except && !options.labels) return;
+  const patternNames = PATTERNS.map((pattern) => pattern.name);
+  for (const option of ['only', 'except', 'labels']) {
+    const validNames = option === 'labels' ? [...patternNames, ...SENSITIVE_KEYS.keys()] : patternNames;
+    const valid = new Set(validNames);
+    const names = option === 'labels' ? Object.keys(options.labels || {}) : options[option] || [];
+    for (const name of names) {
+      if (!valid.has(name)) {
+        throw new RangeError(`Unknown name "${name}" in options.${option}. Valid names: ${validNames.join(', ')}`);
+      }
+    }
+  }
+}
+
 function redact(input, options = {}) {
+  validateOptions(options);
   if (input === null || input === undefined) return input;
   if (typeof input !== 'string') return input;
 
@@ -275,6 +291,7 @@ function redact(input, options = {}) {
 }
 
 function redactObject(value, options = {}) {
+  validateOptions(options);
   if (typeof value === 'string') return redact(value, options);
   if (Array.isArray(value)) return value.map((item) => redactObject(item, options));
   if (isPlainObject(value)) {

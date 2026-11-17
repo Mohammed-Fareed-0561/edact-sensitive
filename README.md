@@ -74,6 +74,12 @@ redactObject({ myPhrase: 'shh' }, { sensitiveKeys: ['myPhrase'] });
 // { myPhrase: '[REDACTED]' }
 ```
 
+`only` and `except` must contain names from the supported-pattern table below.
+Unknown names throw a `RangeError` listing the valid names, even for empty or non-string input.
+For example, `{ only: ['emial'] }` throws instead of silently leaving email addresses visible.
+`labels` keys are validated too: pattern names and normalized sensitive key names such as `password` are accepted.
+This validation applies to both `redact` and `redactObject`.
+
 Date, RegExp and other non-plain objects pass through unchanged — only plain objects, arrays and strings are rebuilt.
 
 ### `findSensitive(text)`
