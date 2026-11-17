@@ -59,3 +59,52 @@ test('custom patterns are applied', () => {
 test('leaves plain text untouched', () => {
   assert.equal(redact('Hello, world. No secrets here.'), 'Hello, world. No secrets here.');
 });
+
+test('redacts values stored under sensitive key names', () => {
+  assert.deepEqual(
+    redactObject({ password: 'hunter2', apiKey: 'abc123secret', user: 'ana' }),
+    { password: '[PASSWORD]', apiKey: '[API_KEY]', user: 'ana' }
+  );
+});
+
+test('sensitive key matching is case-insensitive and ignores separators', () => {
+  assert.deepEqual(
+    redactObject({ PASSWORD: 'x', Api_Key: 'y', 'access-key': 'z' }),
+    { PASSWORD: '[PASSWORD]', Api_Key: '[API_KEY]', 'access-key': '[API_KEY]' }
+  );
+});
+
+test('redacts sensitive keys nested in objects', () => {
+  assert.deepEqual(
+    redactObject({ config: { credentials: { token: 'tok123', host: 'example.com' } } }),
+    { config: { credentials: { token: '[TOKEN]', host: 'example.com' } } }
+  );
+});
+
+test('redacts sensitive keys inside arrays of objects', () => {
+  assert.deepEqual(
+    redactObject({ users: [{ name: 'ana', password: 'hunter2' }, { name: 'bob' }] }),
+    { users: [{ name: 'ana', password: '[PASSWORD]' }, { name: 'bob' }] }
+  );
+});
+
+test('non-sensitive keys keep their values (pattern redaction still applies)', () => {
+  assert.deepEqual(
+    redactObject({ user: 'ana', note: 'mail a@b.com', count: 3 }),
+    { user: 'ana', note: 'mail [EMAIL]', count: 3 }
+  );
+});
+
+test('redacts non-string values under sensitive keys', () => {
+  assert.deepEqual(
+    redactObject({ password: 12345, token: true, secret: null, apiKey: 0 }),
+    { password: '[PASSWORD]', token: '[TOKEN]', secret: '[SECRET]', apiKey: '[API_KEY]' }
+  );
+});
+
+test('options.sensitiveKeys extends the default sensitive key list', () => {
+  assert.deepEqual(
+    redactObject({ mySecretPhrase: 'shh', user: 'ana' }, { sensitiveKeys: ['mySecretPhrase'] }),
+    { mySecretPhrase: '[REDACTED]', user: 'ana' }
+  );
+});
