@@ -78,6 +78,27 @@ function ibanValid(match) {
   return remainder === 1;
 }
 
+// Query-string parameter names whose values are secrets, mapped to the
+// label that replaces the value. Looked up by the normalised param name
+// (lower-case, '_'/'-' stripped), so `access_token`, `access-token` and
+// `accessToken` all map to the same label.
+const QUERY_PARAM_LABELS = {
+  token: '[TOKEN]',
+  accesstoken: '[TOKEN]',
+  refreshtoken: '[TOKEN]',
+  idtoken: '[TOKEN]',
+  auth: '[TOKEN]',
+  authorization: '[TOKEN]',
+  session: '[TOKEN]',
+  sessionid: '[TOKEN]',
+  apikey: '[API_KEY]',
+  secret: '[SECRET]',
+  clientsecret: '[SECRET]',
+  password: '[PASSWORD]',
+  passwd: '[PASSWORD]',
+  pwd: '[PASSWORD]',
+};
+
 const PATTERNS = [
   {
     name: 'urlPassword',
@@ -85,6 +106,34 @@ const PATTERNS = [
     // https://user:password@host — redact only the password part.
     regex: /(\/\/[^/\s:@]+:)([^/\s@]+)(@)/g,
     replacement: '$1[PASSWORD]$3',
+  },
+  {
+    name: 'urlQuerySecret',
+    label: '[REDACTED]',
+    // Secrets passed as URL query values: ?token=abc123&user=ana redacts
+    // only the value of a sensitive param, never the param name or other
+    // params. The label depends on the param name (see QUERY_PARAM_LABELS),
+    // so this pattern uses `labelFor` instead of a fixed label.
+    regex: /([?&](?:access[_-]?token|refresh[_-]?token|id[_-]?token|api[_-]?key|client[_-]?secret|session[_-]?id|token|secret|auth|authorization|password|passwd|pwd|session)=)([^&\s"'<>#,;]+)/gi,
+    labelFor: (match, groups) => {
+      const prefix = groups[0];
+      const name = prefix.slice(1, -1).toLowerCase().replace(/[_-]/g, '');
+      return [prefix, QUERY_PARAM_LABELS[name] || '[REDACTED]'];
+    },
+  },
+  {
+    name: 'authHeader',
+    label: '[TOKEN]',
+    // Authorization: Bearer <token> / Basic <base64 user:pass> in log text.
+    // Only the credential is replaced; the header name and scheme stay.
+    // Other schemes (Negotiate, Digest, ...) are left alone: their tokens
+    // are session-bound challenge responses, not reusable static credentials.
+    regex: /\b(Authorization|Proxy-Authorization)(:)([ \t]*)(Bearer|Basic)([ \t]+)([^\s"'<>,;}\]]+)/gi,
+    labelFor: (match, groups) => {
+      const [header, colon, afterColon, scheme, afterScheme] = groups;
+      const label = scheme.toLowerCase() === 'basic' ? '[CREDENTIALS]' : '[TOKEN]';
+      return [header + colon + afterColon + scheme + afterScheme, label];
+    },
   },
   {
     name: 'email',
@@ -169,7 +218,10 @@ const PATTERNS = [
     name: 'genericApiKey',
     label: '[API_KEY]',
     regex: /\b(?:api[_-]?key|apikey|secret|token|passwd|password)\s*[:=]\s*['"]?([A-Za-z0-9_\-./]{8,})['"]?/gi,
-    replacement: (match) => match.replace(/([:=]\s*['"]?)[A-Za-z0-9_\-./]{8,}(['"]?)/, '$1[API_KEY]$2'),
+    // Receives the effective label as an extra final argument from redact(),
+    // so keepLabels / options.labels are honoured here too.
+    replacement: (match, _value, _offset, _string, label) =>
+      match.replace(/([:=]\s*['"]?)[A-Za-z0-9_\-./]{8,}(['"]?)/, `$1${label || '[API_KEY]'}$2`),
   },
 ];
 
@@ -184,11 +236,29 @@ function redact(input, options = {}) {
 
   for (const pattern of PATTERNS) {
     if (!enabled.has(pattern.name) || disabled.has(pattern.name)) continue;
-    const label = options.keepLabels === false ? replacement : pattern.label;
+    // Per-type label override, e.g. { labels: { email: '[E-MAIL]' } }.
+    // keepLabels: false still wins over everything.
+    const label =
+      options.keepLabels === false
+        ? replacement
+        : (options.labels || {})[pattern.name] || pattern.label;
     if (typeof pattern.replacement === 'function') {
-      out = out.replace(pattern.regex, pattern.replacement);
+      // Function replacements receive the effective label as an extra
+      // final argument, so they can honour keepLabels / options.labels.
+      out = out.replace(pattern.regex, (...args) => pattern.replacement(...args, label));
     } else if (typeof pattern.replacement === 'string') {
-      out = out.replace(pattern.regex, pattern.replacement);
+      // String replacements carry the pattern's own label as a placeholder.
+      out = out.replace(pattern.regex, pattern.replacement.split(pattern.label).join(label));
+    } else if (pattern.labelFor) {
+      // Patterns whose label depends on what matched (query param name,
+      // auth scheme) and where only the secret part is replaced.
+      // labelFor(match, groups) returns [textToKeep, labelForTheSecret].
+      out = out.replace(pattern.regex, (match, ...groups) => {
+        const [keep, matchLabel] = pattern.labelFor(match, groups);
+        const effectiveLabel =
+          options.keepLabels === false ? replacement : (options.labels || {})[pattern.name] || matchLabel;
+        return keep + effectiveLabel;
+      });
     } else if (pattern.validate) {
       out = out.replace(pattern.regex, (match) => (pattern.validate(match) ? label : match));
     } else {
@@ -257,9 +327,11 @@ function normalizeKeyName(key) {
 function sensitiveKeyLabel(key, options = {}) {
   const name = normalizeKeyName(key);
   if (SENSITIVE_KEYS.has(name)) {
-    return options.keepLabels === false
-      ? options.replacement || DEFAULT_REPLACEMENT
-      : SENSITIVE_KEYS.get(name);
+    if (options.keepLabels === false) return options.replacement || DEFAULT_REPLACEMENT;
+    // options.labels can also rename a key-based label, matched by the
+    // (normalised) key name, e.g. { password: '[PWD]' }.
+    if (options.labels && options.labels[name]) return options.labels[name];
+    return SENSITIVE_KEYS.get(name);
   }
   const extra = (options.sensitiveKeys || []).map(normalizeKeyName);
   if (extra.includes(name)) return options.replacement || DEFAULT_REPLACEMENT;
