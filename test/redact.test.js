@@ -166,3 +166,151 @@ test('plain-object redaction still works after the non-plain fix', () => {
     }
   );
 });
+
+// --- Issue #13: secrets in URL query strings ---
+
+test('redacts only the value of sensitive query params, keeping other params', () => {
+  assert.equal(
+    redact('GET https://example.com/callback?token=abc123&user=ana&page=2'),
+    'GET https://example.com/callback?token=[TOKEN]&user=ana&page=2'
+  );
+  assert.equal(
+    redact('https://example.com/x?access_token=zzz&auth=yyy&lang=en'),
+    'https://example.com/x?access_token=[TOKEN]&auth=[TOKEN]&lang=en'
+  );
+});
+
+test('query param labels follow the param name', () => {
+  assert.equal(redact('?api_key=abcdef0123'), '?api_key=[API_KEY]');
+  assert.equal(redact('?client_secret=s3cr3tvalue'), '?client_secret=[SECRET]');
+  assert.equal(redact('?password=hunter2'), '?password=[PASSWORD]');
+  assert.equal(redact('?refresh_token=tok123'), '?refresh_token=[TOKEN]');
+  assert.equal(redact('?sessionid=abc123'), '?sessionid=[TOKEN]');
+  assert.equal(redact('?apiKey=abcdef0123'), '?apiKey=[API_KEY]');
+});
+
+test('query secret redaction is case-insensitive and stops at a fragment', () => {
+  assert.equal(redact('?TOKEN=abc123'), '?TOKEN=[TOKEN]');
+  assert.equal(redact('?token=abc123#section'), '?token=[TOKEN]#section');
+});
+
+test('query secret redaction works inside longer log lines and object values', () => {
+  assert.equal(
+    redact('200 GET /cb?token=abc123 HTTP/1.1'),
+    '200 GET /cb?token=[TOKEN] HTTP/1.1'
+  );
+  assert.deepEqual(
+    redactObject({ url: 'https://example.com/cb?token=abc123&user=ana' }),
+    { url: 'https://example.com/cb?token=[TOKEN]&user=ana' }
+  );
+});
+
+test('query secret redaction respects only / except / keepLabels', () => {
+  assert.equal(redact('?token=abc123', { only: ['email'] }), '?token=abc123');
+  assert.equal(redact('?token=abc123', { except: ['urlQuerySecret'] }), '?token=abc123');
+  assert.equal(redact('?token=abc123', { keepLabels: false, replacement: '***' }), '?token=***');
+  assert.equal(redact('?token=abc123', { labels: { urlQuerySecret: '[Q]' } }), '?token=[Q]');
+});
+
+test('query secret false positives stay untouched', () => {
+  assert.equal(redact('?user=ana&page=2'), '?user=ana&page=2');
+  // The param name must match exactly: longer names are not secrets.
+  assert.equal(redact('?mytoken=abc123'), '?mytoken=abc123');
+  assert.equal(redact('?tokenized=abc123'), '?tokenized=abc123');
+  // An empty value has nothing to leak.
+  assert.equal(redact('?token='), '?token=');
+  // 'token' as a bare word in prose is not a query param.
+  assert.equal(redact('your token is abc123'), 'your token is abc123');
+});
+
+// --- Issue #6: per-type custom replacement labels ---
+
+test('options.labels overrides one pattern label at a time', () => {
+  assert.equal(
+    redact('a@b.com 555-123-4567', { labels: { email: '[E-MAIL]', phone: '[TEL]' } }),
+    '[E-MAIL] [TEL]'
+  );
+  // A label for one type leaves every other type on its default label.
+  assert.equal(redact('a@b.com', { labels: { phone: '[TEL]' } }), '[EMAIL]');
+  assert.equal(redact('Call 555-123-4567', { labels: { email: '[E-MAIL]' } }), 'Call [PHONE]');
+});
+
+test('keepLabels: false wins over per-type labels', () => {
+  assert.equal(
+    redact('a@b.com', { labels: { email: '[E-MAIL]' }, keepLabels: false, replacement: '***' }),
+    '***'
+  );
+});
+
+test('options.labels works through redactObject, including sensitive keys', () => {
+  assert.deepEqual(
+    redactObject({ note: 'mail a@b.com' }, { labels: { email: '[E-MAIL]' } }),
+    { note: 'mail [E-MAIL]' }
+  );
+  assert.deepEqual(
+    redactObject({ password: 'hunter2' }, { labels: { password: '[PWD]' } }),
+    { password: '[PWD]' }
+  );
+});
+
+test('options.labels applies to urlPassword and genericApiKey too', () => {
+  assert.equal(
+    redact('https://user:hunter2@example.com/x', { labels: { urlPassword: '[PW]' } }),
+    'https://user:[PW]@example.com/x'
+  );
+  assert.equal(
+    redact('https://user:hunter2@example.com/x', { keepLabels: false, replacement: '***' }),
+    'https://user:***@example.com/x'
+  );
+  assert.equal(
+    redact('api_key = abcdefgh12345678', { labels: { genericApiKey: '[KEY]' } }),
+    'api_key = [KEY]'
+  );
+});
+
+// --- Authorization header values in log text ---
+
+test('redacts Bearer and Basic credentials, keeping header name and scheme', () => {
+  assert.equal(redact('Authorization: Bearer abc123opaque'), 'Authorization: Bearer [TOKEN]');
+  assert.equal(redact('Authorization: Basic dXNlcjpwYXNz'), 'Authorization: Basic [CREDENTIALS]');
+});
+
+test('auth header redaction is case-insensitive and covers Proxy-Authorization', () => {
+  assert.equal(redact('authorization: Bearer xyz'), 'authorization: Bearer [TOKEN]');
+  assert.equal(redact('Proxy-Authorization: Basic dXNlcjpwYXNz'), 'Proxy-Authorization: Basic [CREDENTIALS]');
+});
+
+test('auth header redaction works inside longer log lines', () => {
+  assert.equal(
+    redact('request headers: Authorization: Bearer abc123, Content-Type: text/plain'),
+    'request headers: Authorization: Bearer [TOKEN], Content-Type: text/plain'
+  );
+});
+
+test('auth header redaction respects only / except / keepLabels', () => {
+  assert.equal(redact('Authorization: Bearer abc', { only: ['email'] }), 'Authorization: Bearer abc');
+  assert.equal(redact('Authorization: Bearer abc', { except: ['authHeader'] }), 'Authorization: Bearer abc');
+  assert.equal(
+    redact('Authorization: Bearer abc', { keepLabels: false, replacement: '***' }),
+    'Authorization: Bearer ***'
+  );
+});
+
+test('other auth schemes are left alone', () => {
+  // Deliberate choice: only Bearer (reusable opaque token) and Basic
+  // (base64 username:password) are redacted. Negotiate, Digest and friends
+  // carry session-bound challenge responses, not static credentials, so
+  // they are not treated as secrets here.
+  assert.equal(redact('Authorization: Negotiate YIIabc123'), 'Authorization: Negotiate YIIabc123');
+  assert.equal(redact('Authorization: Digest username="ana"'), 'Authorization: Digest username="ana"');
+  // A scheme with no credential has nothing to leak.
+  assert.equal(redact('Authorization: Bearer'), 'Authorization: Bearer');
+});
+
+test('findSensitive reports the new pattern types', () => {
+  const found = findSensitive('?token=abc123 and Authorization: Bearer xyz');
+  assert.deepEqual(
+    found.map((f) => f.type).sort(),
+    ['authHeader', 'urlQuerySecret']
+  );
+});
