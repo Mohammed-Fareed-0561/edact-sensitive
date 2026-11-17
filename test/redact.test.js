@@ -314,3 +314,39 @@ test('findSensitive reports the new pattern types', () => {
     ['authHeader', 'urlQuerySecret']
   );
 });
+
+// Unknown option names must not silently disable or change redaction.
+for (const option of ['only', 'except', 'labels']) {
+  test(`rejects unknown names in ${option}`, () => {
+    const options = { [option]: option === 'labels' ? { emial: '[MAIL]' } : ['emial'] };
+    for (const input of ['a@example.com', '', null, 42]) {
+      assert.throws(() => redact(input, options), (error) => {
+        assert.ok(error instanceof RangeError);
+        assert.match(error.message, new RegExp(option));
+        assert.match(error.message, /emial/);
+        assert.match(error.message, /email/);
+        return true;
+      });
+    }
+    for (const input of [{}, [], { password: 'synthetic' }]) {
+      assert.throws(() => redactObject(input, options), RangeError);
+    }
+  });
+}
+
+test('accepts all current pattern names and sensitive-key labels', () => {
+  const { PATTERNS, SENSITIVE_KEYS } = require('../src');
+  const names = PATTERNS.map((pattern) => pattern.name);
+  assert.equal(redact('a@example.com', { only: names }), '[EMAIL]');
+  assert.equal(redact('a@example.com', { except: names }), 'a@example.com');
+  assert.equal(redact('a@example.com', { only: [] }), 'a@example.com');
+  const labels = Object.fromEntries([...names, ...SENSITIVE_KEYS.keys()].map((name) => [name, '[CUSTOM]']));
+  assert.deepEqual(redactObject({ password: 'synthetic', note: 'a@example.com' }, { labels }), {
+    password: '[CUSTOM]', note: '[CUSTOM]',
+  });
+});
+
+test('sensitive key names are not accepted as pattern filters', () => {
+  assert.throws(() => redact('text', { only: ['password'] }), RangeError);
+  assert.throws(() => redact('text', { except: ['password'] }), RangeError);
+});

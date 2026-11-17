@@ -1,9 +1,11 @@
 export interface RedactOptions {
   replacement?: string;
+  /** Pattern names to include. Unknown names throw RangeError. */
   only?: string[];
+  /** Pattern names to exclude. Unknown names throw RangeError. */
   except?: string[];
   keepLabels?: boolean;
-  /** Per-pattern replacement labels, keyed by pattern name, e.g. `{ email: '[E-MAIL]' }`. `keepLabels: false` still wins over these. */
+  /** Replacement labels, keyed by pattern name or normalized sensitive key name. For example, `{ email: '[E-MAIL]' }`. Unknown names throw RangeError. `keepLabels: false` still wins over these. */
   labels?: Record<string, string>;
   custom?: Array<{ pattern: string | RegExp; flags?: string; replacement?: string }>;
   /** Extra object key names whose values redactObject should replace outright. */
