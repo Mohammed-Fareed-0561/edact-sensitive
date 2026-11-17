@@ -37,6 +37,16 @@ test('redacts nested values in objects and arrays', () => {
   });
 });
 
+test('redacts an Indian PAN number', () => {
+  assert.equal(redact('PAN ABCDE1234F on file'), 'PAN [PAN] on file');
+});
+
+test('keeps text that only looks like an Indian PAN number', () => {
+  assert.equal(redact('code ABCDE1234'), 'code ABCDE1234');
+  assert.equal(redact('ref ABCDE1234FG'), 'ref ABCDE1234FG');
+  assert.equal(redact('pan abcde1234f'), 'pan abcde1234f');
+});
+
 test('findSensitive lists what was found', () => {
   const found = findSensitive('mail a@b.com, card 4111111111111111');
   assert.deepEqual(
