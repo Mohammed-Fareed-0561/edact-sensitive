@@ -66,6 +66,8 @@ redactObject({ myPhrase: 'shh' }, { sensitiveKeys: ['myPhrase'] });
 // { myPhrase: '[REDACTED]' }
 ```
 
+Date, RegExp and other non-plain objects pass through unchanged — only plain objects, arrays and strings are rebuilt.
+
 ### `findSensitive(text)`
 
 Returns what would be redacted, without changing the text:
