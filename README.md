@@ -42,6 +42,14 @@ redact('a@b.com 555-123-4567', { only: ['email'] });
 redact('a@b.com', { keepLabels: false, replacement: '***' });
 // '***'
 
+// Override the label of one pattern type only
+redact('a@b.com 555-123-4567', { labels: { email: '[E-MAIL]', phone: '[TEL]' } });
+// '[E-MAIL] [TEL]'
+// `keepLabels: false` still wins over per-type labels. Labels are keyed by
+// pattern name (`email`, `phone`, `urlQuerySecret`, `authHeader`, ...).
+// They also apply to values redacted because of their object key name,
+// matched by the key name: redactObject({ password: 'x' }, { labels: { password: '[PWD]' } })
+
 // Add your own pattern
 redact('order #12345', {
   custom: [{ pattern: '#\\d+', replacement: '[ORDER]' }],
@@ -92,7 +100,13 @@ findSensitive('mail a@b.com, card 4111111111111111');
 | Indian PAN | `ABCDE1234F` → `[PAN]` |
 | IPv4 | `203.0.113.42` → `[IP]` |
 | URL passwords | `https://user:pass@host` → `https://user:[PASSWORD]@host` |
+| URL query-string secrets | `?token=abc123&user=ana` → `?token=[TOKEN]&user=ana` |
+| Authorization headers | `Authorization: Bearer abc` → `Authorization: Bearer [TOKEN]`; `Basic …` → `[CREDENTIALS]` |
 | `key = value` secrets | `api_key = abc123…` → `api_key = [API_KEY]` |
+
+Secrets in a URL query string are redacted only when the parameter name is a known secret name (`token`, `access_token`, `refresh_token`, `id_token`, `api_key`, `secret`, `client_secret`, `auth`, `authorization`, `password`, `passwd`, `pwd`, `session`, `sessionid`, with `_`/`-`/camelCase variants). Other parameters are left alone, as are similar-looking names such as `mytoken`. The label follows the parameter: tokens → `[TOKEN]`, API keys → `[API_KEY]`, secrets → `[SECRET]`, passwords → `[PASSWORD]`.
+
+`Authorization` and `Proxy-Authorization` headers are redacted only for the `Bearer` and `Basic` schemes — the header name and scheme stay readable, only the credential is replaced. Other schemes (`Negotiate`, `Digest`, …) are left alone: their tokens are session-bound challenge responses, not reusable static credentials.
 
 Credit cards are only redacted when they pass the Luhn check, so a random 16-digit order number is left alone. Phone numbers need at least 7 digits. Indian PAN numbers are matched in their five-letter, four-digit, one-letter form.
 
