@@ -108,3 +108,34 @@ test('options.sensitiveKeys extends the default sensitive key list', () => {
     { mySecretPhrase: '[REDACTED]', user: 'ana' }
   );
 });
+
+test('preserves a Date value inside an object while redacting a sibling email', () => {
+  const created = new Date('2026-11-17T09:00:00.000Z');
+  const out = redactObject({ created, email: 'a@b.com' });
+  assert.ok(out.created instanceof Date);
+  assert.equal(out.created.getTime(), created.getTime());
+  assert.equal(out.email, '[EMAIL]');
+});
+
+test('returns a top-level Date unchanged', () => {
+  const date = new Date('2026-11-17T09:00:00.000Z');
+  assert.equal(redactObject(date), date);
+});
+
+test('preserves a RegExp value inside an object', () => {
+  const pattern = /foo\d+/gi;
+  const out = redactObject({ pattern });
+  assert.equal(out.pattern, pattern);
+  assert.equal(out.pattern.source, 'foo\\d+');
+});
+
+test('plain-object redaction still works after the non-plain fix', () => {
+  assert.deepEqual(
+    redactObject({ user: { email: 'a@b.com' }, tags: ['x@y.com'], when: new Date('2026-01-01T00:00:00.000Z') }),
+    {
+      user: { email: '[EMAIL]' },
+      tags: ['[EMAIL]'],
+      when: new Date('2026-01-01T00:00:00.000Z'),
+    }
+  );
+});
