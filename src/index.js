@@ -142,7 +142,7 @@ function redact(input, options = {}) {
 function redactObject(value, options = {}) {
   if (typeof value === 'string') return redact(value, options);
   if (Array.isArray(value)) return value.map((item) => redactObject(item, options));
-  if (value && typeof value === 'object') {
+  if (isPlainObject(value)) {
     const out = {};
     for (const [key, val] of Object.entries(value)) {
       // A value stored under a sensitive key name is a secret, whatever
@@ -153,6 +153,16 @@ function redactObject(value, options = {}) {
     return out;
   }
   return value;
+}
+
+// Only plain objects (created with {} or Object.create(null)) are safe
+// to rebuild key by key. Anything else — Date, RegExp, Buffer, class
+// instances — keeps its own internal state, which Object.entries would
+// not preserve, so it is passed through unchanged.
+function isPlainObject(value) {
+  if (!value || typeof value !== 'object') return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
 }
 
 // Key names whose values are always secrets. Matching is case-insensitive
