@@ -145,11 +145,50 @@ function redactObject(value, options = {}) {
   if (value && typeof value === 'object') {
     const out = {};
     for (const [key, val] of Object.entries(value)) {
-      out[key] = redactObject(val, options);
+      // A value stored under a sensitive key name is a secret, whatever
+      // its type — replace it outright instead of recursing into it.
+      const label = sensitiveKeyLabel(key, options);
+      out[key] = label !== null ? label : redactObject(val, options);
     }
     return out;
   }
   return value;
+}
+
+// Key names whose values are always secrets. Matching is case-insensitive
+// and ignores '_'/'-' separators, so `apiKey`, `api_key` and `API-KEY`
+// all match. Contributors: extend this map to cover new key names.
+const SENSITIVE_KEYS = new Map([
+  ['password', '[PASSWORD]'],
+  ['passwd', '[PASSWORD]'],
+  ['pwd', '[PASSWORD]'],
+  ['secret', '[SECRET]'],
+  ['apikey', '[API_KEY]'],
+  ['accesskey', '[API_KEY]'],
+  ['token', '[TOKEN]'],
+  ['auth', '[TOKEN]'],
+  ['authorization', '[TOKEN]'],
+  ['privatekey', '[PRIVATE_KEY]'],
+  ['clientsecret', '[SECRET]'],
+]);
+
+function normalizeKeyName(key) {
+  return String(key).toLowerCase().replace(/[_-]/g, '');
+}
+
+// Returns the replacement label for a sensitive key name, or null if the
+// key is not sensitive. `options.sensitiveKeys` adds extra key names
+// (matched the same way) that are replaced with '[REDACTED]'.
+function sensitiveKeyLabel(key, options = {}) {
+  const name = normalizeKeyName(key);
+  if (SENSITIVE_KEYS.has(name)) {
+    return options.keepLabels === false
+      ? options.replacement || DEFAULT_REPLACEMENT
+      : SENSITIVE_KEYS.get(name);
+  }
+  const extra = (options.sensitiveKeys || []).map(normalizeKeyName);
+  if (extra.includes(name)) return options.replacement || DEFAULT_REPLACEMENT;
+  return null;
 }
 
 function findSensitive(input) {
@@ -167,4 +206,4 @@ function findSensitive(input) {
   return found;
 }
 
-module.exports = { redact, redactObject, findSensitive, PATTERNS };
+module.exports = { redact, redactObject, findSensitive, PATTERNS, SENSITIVE_KEYS };
