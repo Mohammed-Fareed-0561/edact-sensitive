@@ -55,6 +55,15 @@ Recursively redacts strings inside objects and arrays. Useful for sanitising a w
 ```js
 redactObject({ user: { email: 'ana@example.com' }, tags: ['x@y.com'] });
 // { user: { email: '[EMAIL]' }, tags: ['[EMAIL]'] }
+
+// Values stored under a sensitive key name are replaced outright,
+// whatever their type — even when they look like plain text:
+redactObject({ password: 'hunter2', apiKey: 'abc123secret', user: 'ana' });
+// { password: '[PASSWORD]', apiKey: '[API_KEY]', user: 'ana' }
+
+// Add your own sensitive key names with `sensitiveKeys`:
+redactObject({ myPhrase: 'shh' }, { sensitiveKeys: ['myPhrase'] });
+// { myPhrase: '[REDACTED]' }
 ```
 
 ### `findSensitive(text)`
