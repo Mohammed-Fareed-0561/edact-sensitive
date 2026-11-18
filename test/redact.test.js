@@ -406,3 +406,73 @@ test('every PATTERNS entry matches the exported TypeScript shape', () => {
   assert.equal(typeof byName.authHeader.labelFor, 'function');
   assert.equal(typeof byName.iban.validate, 'function');
 });
+
+// --- Issue #22: redactObject crashes on circular references and very deep nesting ---
+
+test('redactObject replaces a self-reference with [Circular] instead of throwing', () => {
+  const c = { name: 'ana' };
+  c.self = c;
+  assert.deepEqual(redactObject(c), { name: 'ana', self: '[Circular]' });
+});
+
+test('redactObject replaces a mutual two-object cycle with [Circular]', () => {
+  const a = { name: 'ana' };
+  const b = { name: 'bob', back: a };
+  a.other = b;
+  const out = redactObject(a);
+  assert.equal(out.name, 'ana');
+  assert.equal(out.other.name, 'bob');
+  assert.equal(out.other.back, '[Circular]');
+});
+
+test('redactObject replaces a self-referencing array with [Circular]', () => {
+  const arr = ['a@b.com'];
+  arr.push(arr);
+  assert.deepEqual(redactObject(arr), ['[EMAIL]', '[Circular]']);
+});
+
+test('redactObject does not mistake a shared non-circular object for a cycle', () => {
+  const shared = { email: 'a@b.com' };
+  assert.deepEqual(redactObject({ first: shared, second: shared }), {
+    first: { email: '[EMAIL]' },
+    second: { email: '[EMAIL]' },
+  });
+});
+
+test('redactObject does not throw on a 5,000-deep object and caps it with a placeholder', () => {
+  let deep = { leaf: 'a@b.com' };
+  for (let i = 0; i < 5000; i++) deep = { next: deep };
+  let out;
+  assert.doesNotThrow(() => {
+    out = redactObject(deep);
+  });
+  // Walk down until the depth cap: the value there is the placeholder.
+  let cur = out;
+  let steps = 0;
+  while (typeof cur === 'object' && cur !== null) {
+    cur = cur.next;
+    steps++;
+  }
+  assert.equal(cur, '[DEPTH_LIMIT]');
+  assert.ok(steps <= 101, `depth cap reached after ${steps} levels`);
+});
+
+test('redactObject honours options.maxDepth', () => {
+  const value = { a: { b: { c: { d: 'x' } } } };
+  assert.deepEqual(redactObject(value, { maxDepth: 2 }), {
+    a: { b: { c: '[DEPTH_LIMIT]' } },
+  });
+});
+
+test('redaction still works inside nested objects and arrays after the circular/depth fix', () => {
+  assert.deepEqual(
+    redactObject({
+      user: { email: 'a@b.com', password: 'hunter2' },
+      tags: ['x@y.com', { note: 'mail a@b.com' }],
+    }),
+    {
+      user: { email: '[EMAIL]', password: '[PASSWORD]' },
+      tags: ['[EMAIL]', { note: 'mail [EMAIL]' }],
+    }
+  );
+});
