@@ -355,18 +355,41 @@ function sensitiveKeyLabel(key, options = {}) {
   return null;
 }
 
-function findSensitive(input) {
+function findSensitive(input, options = {}) {
+  validateOptions(options);
   if (typeof input !== 'string') return [];
+  // Same enabled / disabled logic as redact(): `only` picks the patterns
+  // to look for, `except` removes patterns from that set.
+  const enabled = new Set(options.only || PATTERNS.map((p) => p.name));
+  const disabled = new Set(options.except || []);
   const found = [];
   for (const pattern of PATTERNS) {
+    if (!enabled.has(pattern.name) || disabled.has(pattern.name)) continue;
     const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
     let match;
     while ((match = regex.exec(input)) !== null) {
       if (pattern.validate && !pattern.validate(match[0])) continue;
-      found.push({ type: pattern.name, value: match[0] });
+      found.push({ type: pattern.name, value: match[0], index: match.index });
       if (match[0].length === 0) regex.lastIndex++;
     }
   }
+  // Custom patterns are reported as type 'custom'. Like redact(), they are
+  // applied regardless of only / except — they are the caller's own patterns,
+  // not one of the built-in types.
+  for (const custom of options.custom || []) {
+    const regex =
+      custom instanceof RegExp
+        ? new RegExp(custom.source, custom.flags.includes('g') ? custom.flags : custom.flags + 'g')
+        : new RegExp(custom.pattern, custom.flags || 'g');
+    let match;
+    while ((match = regex.exec(input)) !== null) {
+      found.push({ type: 'custom', value: match[0], index: match.index });
+      if (match[0].length === 0) regex.lastIndex++;
+    }
+  }
+  // Text order: sort by start position. Array.prototype.sort is stable, so
+  // matches starting at the same index keep pattern order as the tie-break.
+  found.sort((a, b) => a.index - b.index);
   return found;
 }
 
