@@ -72,6 +72,39 @@ test('findSensitive lists what was found', () => {
   );
 });
 
+// --- Issue #25: findSensitive returns matches in text order and honours options ---
+
+test('findSensitive returns matches in text order with their index', () => {
+  const found = findSensitive('card 4111111111111111 then mail a@b.com then phone 555-123-4567');
+  assert.deepEqual(found, [
+    { type: 'creditCard', value: '4111111111111111', index: 5 },
+    { type: 'email', value: 'a@b.com', index: 32 },
+    { type: 'phone', value: '555-123-4567', index: 51 },
+  ]);
+});
+
+test('findSensitive honours options.only', () => {
+  const found = findSensitive('mail a@b.com, card 4111111111111111', { only: ['email'] });
+  assert.deepEqual(found, [{ type: 'email', value: 'a@b.com', index: 5 }]);
+});
+
+test('findSensitive honours options.except', () => {
+  const found = findSensitive('mail a@b.com, card 4111111111111111', { except: ['email'] });
+  assert.deepEqual(found, [{ type: 'creditCard', value: '4111111111111111', index: 19 }]);
+});
+
+test('findSensitive reports custom patterns as type custom', () => {
+  const found = findSensitive('order #12345 and a@b.com', { custom: [{ pattern: '#\\d+' }] });
+  assert.deepEqual(found, [
+    { type: 'custom', value: '#12345', index: 6 },
+    { type: 'email', value: 'a@b.com', index: 17 },
+  ]);
+});
+
+test('findSensitive rejects unknown names in only', () => {
+  assert.throws(() => findSensitive('a@b.com', { only: ['emial'] }), RangeError);
+});
+
 test('options.only limits redaction to one type', () => {
   assert.equal(redact('a@b.com 555-123-4567', { only: ['email'] }), '[EMAIL] 555-123-4567');
 });
