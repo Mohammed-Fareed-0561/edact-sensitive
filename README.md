@@ -131,6 +131,14 @@ This is a safety net, not a guarantee. No pattern list can catch every secret in
 
 Contributions are welcome — especially new redaction patterns. See [CONTRIBUTING.md](CONTRIBUTING.md). Good first issues are labelled `good first issue`.
 
+## Contributors
+
+redact-sensitive exists thanks to everyone who has contributed code, fixes and ideas — this wall grows on its own as new pull requests land:
+
+<a href="https://github.com/sharkohark1234/redact-sensitive/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=sharkohark1234/redact-sensitive" alt="contributors" />
+</a>
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
