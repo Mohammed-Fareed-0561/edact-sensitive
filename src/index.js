@@ -290,21 +290,52 @@ function redact(input, options = {}) {
   return out;
 }
 
+const DEFAULT_MAX_DEPTH = 100;
+
 function redactObject(value, options = {}) {
   validateOptions(options);
+  return redactObjectInternal(value, options, new Set(), 0);
+}
+
+// Internal worker for redactObject. `seen` holds only the ancestors of
+// the value currently being walked (added before recursing, removed
+// after), so a genuinely circular reference becomes '[Circular]' while
+// the same object shared in two non-circular places is redacted twice.
+// `depth` counts nesting levels; past `options.maxDepth` (default 100)
+// the value is replaced with '[DEPTH_LIMIT]' instead of recursing until
+// the stack overflows.
+function redactObjectInternal(value, options, seen, depth) {
   if (typeof value === 'string') return redact(value, options);
-  if (Array.isArray(value)) return value.map((item) => redactObject(item, options));
+  if (Array.isArray(value)) {
+    if (seen.has(value)) return '[Circular]';
+    if (depth > maxDepth(options)) return '[DEPTH_LIMIT]';
+    seen.add(value);
+    const out = value.map((item) => redactObjectInternal(item, options, seen, depth + 1));
+    seen.delete(value);
+    return out;
+  }
   if (isPlainObject(value)) {
+    if (seen.has(value)) return '[Circular]';
+    if (depth > maxDepth(options)) return '[DEPTH_LIMIT]';
+    seen.add(value);
     const out = {};
     for (const [key, val] of Object.entries(value)) {
       // A value stored under a sensitive key name is a secret, whatever
       // its type — replace it outright instead of recursing into it.
       const label = sensitiveKeyLabel(key, options);
-      out[key] = label !== null ? label : redactObject(val, options);
+      out[key] = label !== null ? label : redactObjectInternal(val, options, seen, depth + 1);
     }
+    seen.delete(value);
     return out;
   }
   return value;
+}
+
+function maxDepth(options) {
+  const limit = options.maxDepth;
+  return typeof limit === 'number' && Number.isFinite(limit) && limit >= 0
+    ? Math.floor(limit)
+    : DEFAULT_MAX_DEPTH;
 }
 
 // Only plain objects (created with {} or Object.create(null)) are safe
