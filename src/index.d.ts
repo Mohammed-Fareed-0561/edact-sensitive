@@ -10,6 +10,8 @@ export interface RedactOptions {
   custom?: Array<{ pattern: string | RegExp; flags?: string; replacement?: string }>;
   /** Extra object key names whose values redactObject should replace outright. */
   sensitiveKeys?: string[];
+  /** Maximum nesting depth redactObject recurses into (default 100). Deeper values are replaced with '[DEPTH_LIMIT]' instead of throwing. */
+  maxDepth?: number;
 }
 
 export interface SensitiveMatch {
