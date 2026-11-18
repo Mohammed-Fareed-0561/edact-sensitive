@@ -36,10 +36,13 @@ redact('Card 4111 1111 1111 1111, key sk-abcdefghij1234567890abcd');
 <tr><td>Email</td><td>ana@example.com → [EMAIL]</td></tr>
 <tr><td>Phone</td><td>+1 555-123-4567 → [PHONE]</td></tr>
 <tr><td>Credit card</td><td>Luhn-validated → [CARD]</td></tr>
+<tr><td>IBAN</td><td>Country length and checksum validated, DE89 3704 0044 0532 0130 00 → [IBAN]</td></tr>
 <tr><td>API keys</td><td>GitHub, OpenAI, AWS, Slack tokens</td></tr>
 <tr><td>JWT &amp; private keys</td><td>eyJ… and PEM blocks</td></tr>
 <tr><td>SSN, IPv4, URL passwords</td><td>123-45-6789, 203.0.113.42, user:pass@host</td></tr>
 <tr><td>Indian PAN</td><td>ABCDE1234F → [PAN]</td></tr>
+<tr><td>URL query-string secrets</td><td>?token=abc123&amp;user=ana → ?token=[TOKEN]&amp;user=ana</td></tr>
+<tr><td>Authorization headers</td><td>Authorization: Bearer abc → Authorization: Bearer [TOKEN]; Basic … → [CREDENTIALS]</td></tr>
 </table>
 <h2>Why</h2>
 <p>Logs, error reports and support tickets routinely leak the data they were meant to debug. One <code>console.log(user)</code> can put an email, a token or a card number into a log store. This library is a one-line safety net: run untrusted text through it before logging, storing or sending it anywhere.</p>
