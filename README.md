@@ -82,13 +82,20 @@ This validation applies to both `redact` and `redactObject`.
 
 Date, RegExp and other non-plain objects pass through unchanged — only plain objects, arrays and strings are rebuilt.
 
-### `findSensitive(text)`
+### `findSensitive(text, options?)`
 
-Returns what would be redacted, without changing the text:
+Returns what would be redacted, without changing the text. Results are sorted by position in the text, each with its start `index`:
 
 ```js
 findSensitive('mail a@b.com, card 4111111111111111');
-// [{ type: 'email', value: 'a@b.com' }, { type: 'creditCard', value: '4111111111111111' }]
+// [
+//   { type: 'email', value: 'a@b.com', index: 5 },
+//   { type: 'creditCard', value: '4111111111111111', index: 19 },
+// ]
+
+// Only look for one type, like redact():
+findSensitive('mail a@b.com, card 4111111111111111', { only: ['email'] });
+// [{ type: 'email', value: 'a@b.com', index: 5 }]
 ```
 
 ## What is redacted
