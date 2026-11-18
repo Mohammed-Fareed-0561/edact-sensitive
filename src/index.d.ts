@@ -15,6 +15,8 @@ export interface RedactOptions {
 export interface SensitiveMatch {
   type: string;
   value: string;
+  /** Start position of the match in the input text. */
+  index: number;
 }
 
 /** Default sensitive key names (normalised, lower-case) mapped to their label. */
@@ -47,4 +49,5 @@ export const PATTERNS: RedactPattern[];
 
 export function redact(input: string, options?: RedactOptions): string;
 export function redactObject<T>(value: T, options?: RedactOptions): T;
-export function findSensitive(input: string): SensitiveMatch[];
+/** Results are sorted by position in the text. `options.only` / `options.except` / `options.custom` work the same way as in `redact()`. */
+export function findSensitive(input: string, options?: RedactOptions): SensitiveMatch[];
