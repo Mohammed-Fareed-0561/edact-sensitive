@@ -538,3 +538,19 @@ test('a real email at the end of a long digit-dash run is still redacted', () =>
   );
   assert.equal(redact('id 1-2-3 mail ana-b@example.com', { only: ['email'] }), 'id 1-2-3 mail [EMAIL]');
 });
+
+// --- Issue #20: AWS-style compound secret key names ---
+
+test('genericApiKey redacts aws_secret_access_key and secret_access_key values', () => {
+  const value = 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY';
+  assert.equal(redact(`aws_secret_access_key = ${value}`), 'aws_secret_access_key = [API_KEY]');
+  assert.equal(redact(`secret_access_key = ${value}`), 'secret_access_key = [API_KEY]');
+  assert.equal(redact(`AWS_SECRET_ACCESS_KEY=${value}`), 'AWS_SECRET_ACCESS_KEY=[API_KEY]');
+  assert.equal(redact(`aws-secret-access-key: ${value}`), 'aws-secret-access-key: [API_KEY]');
+  assert.equal(redact(`SecretAccessKey = "${value}"`), 'SecretAccessKey = "[API_KEY]"');
+});
+
+test('plain secret = ... still works and unrelated compound names are untouched', () => {
+  assert.equal(redact('secret = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY'), 'secret = [API_KEY]');
+  assert.equal(redact('secret_access_key_id = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY'), 'secret_access_key_id = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY');
+});
