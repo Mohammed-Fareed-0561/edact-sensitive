@@ -115,7 +115,7 @@ findSensitive('mail a@b.com, card 4111111111111111', { only: ['email'] });
 | URL passwords | `https://user:pass@host` → `https://user:[PASSWORD]@host` |
 | URL query-string secrets | `?token=abc123&user=ana` → `?token=[TOKEN]&user=ana` |
 | Authorization headers | `Authorization: Bearer abc` → `Authorization: Bearer [TOKEN]`; `Basic …` → `[CREDENTIALS]` |
-| `key = value` secrets | `api_key = abc123…` → `api_key = [API_KEY]` |
+| `key = value` secrets | `api_key = abc123…`, `aws_secret_access_key = …` → `api_key = [API_KEY]` |
 
 Secrets in a URL query string are redacted only when the parameter name is a known secret name (`token`, `access_token`, `refresh_token`, `id_token`, `api_key`, `secret`, `client_secret`, `auth`, `authorization`, `password`, `passwd`, `pwd`, `session`, `sessionid`, with `_`/`-`/camelCase variants). Other parameters are left alone, as are similar-looking names such as `mytoken`. The label follows the parameter: tokens → `[TOKEN]`, API keys → `[API_KEY]`, secrets → `[SECRET]`, passwords → `[PASSWORD]`.
 
@@ -142,3 +142,4 @@ redact-sensitive exists thanks to everyone who has contributed code, fixes and i
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
