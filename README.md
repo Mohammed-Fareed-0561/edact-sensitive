@@ -113,6 +113,7 @@ findSensitive('mail a@b.com, card 4111111111111111', { only: ['email'] });
 | Indian PAN | `ABCDE1234F` → `[PAN]` |
 | IPv4 | `203.0.113.42` → `[IP]` |
 | URL passwords | `https://user:pass@host` → `https://user:[PASSWORD]@host` |
+| Connection strings | `mongodb://user:pass@host`, `postgres://user:pass@host`, `redis://:pass@host` → password only → `[PASSWORD]` |
 | URL query-string secrets | `?token=abc123&user=ana` → `?token=[TOKEN]&user=ana` |
 | Authorization headers | `Authorization: Bearer abc` → `Authorization: Bearer [TOKEN]`; `Basic …` → `[CREDENTIALS]` |
 | `key = value` secrets | `api_key = abc123…`, `aws_secret_access_key = …` → `api_key = [API_KEY]` |
