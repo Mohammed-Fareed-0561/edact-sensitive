@@ -161,6 +161,13 @@ const PATTERNS = [
     regex: /\bsk-(?:proj-)?[A-Za-z0-9]{20,}\b/g,
   },
   {
+    name: 'stripeKey',
+    label: '[API_KEY]',
+    // Stripe secret keys: sk_live_... / sk_test_... (24+ chars after the
+    // prefix). Publishable keys (pk_live_...) are not secrets and are left alone.
+    regex: /\bsk_(?:live|test)_[A-Za-z0-9]{24,}\b/g,
+  },
+  {
     name: 'privateKey',
     label: '[PRIVATE_KEY]',
     regex: /-----BEGIN (?:RSA |EC |OPENSSH |PGP )?PRIVATE KEY-----[\s\S]*?-----END (?:RSA |EC |OPENSSH |PGP )?PRIVATE KEY-----/g,
