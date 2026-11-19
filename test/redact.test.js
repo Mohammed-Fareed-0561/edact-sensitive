@@ -793,3 +793,30 @@ test('a URL with userinfo but no numeric project id is not mistaken for a DSN', 
   // The email inside it is still redacted as an email, not as a DSN.
   assert.equal(redact('https://user@example.com/path'), 'https://[EMAIL]/path');
 });
+
+
+// --- Issue #36: GitHub fine-grained personal access tokens (github_pat_...) ---
+
+// Deliberately obvious placeholder built at runtime (no key-shaped literal):
+// a long run of letters, digits and underscores, like a real fine-grained PAT body.
+const patBody = () => 'a1_'.repeat(20);
+
+test('redacts a GitHub fine-grained personal access token as a token', () => {
+  assert.equal(redact(`token github_pat_${patBody()}`), 'token [TOKEN]');
+  const found = findSensitive(`token github_pat_${patBody()}`);
+  assert.ok(found.some((f) => f.type === 'githubToken'));
+});
+
+test('a short github_pat_ string is not a token and stays untouched', () => {
+  assert.equal(redact('token github_pat_short'), 'token github_pat_short');
+  assert.deepEqual(findSensitive('token github_pat_short', { only: ['githubToken'] }), []);
+  assert.equal(redact('see github_pat_ in the docs'), 'see github_pat_ in the docs');
+});
+
+test('classic GitHub tokens still redact beside fine-grained ones', () => {
+  assert.equal(redact('token ghp_abcdefghij1234567890'), 'token [TOKEN]');
+  assert.equal(
+    redact(`a github_pat_${patBody()} and ghp_abcdefghij1234567890 here`),
+    'a [TOKEN] and [TOKEN] here'
+  );
+});
