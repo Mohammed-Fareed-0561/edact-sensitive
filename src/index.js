@@ -190,7 +190,10 @@ const PATTERNS = [
   {
     name: 'githubToken',
     label: '[TOKEN]',
-    regex: /\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}\b/g,
+    // Classic tokens: ghp_/gho_/ghu_/ghs_/ghr_ + 20 or more alphanumerics.
+    // Fine-grained tokens: github_pat_ + a long run of letters, digits and
+    // underscores (22 chars, an underscore, then 59 chars in the real format).
+    regex: /\b(?:(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})\b/g,
   },
   {
     name: 'slackToken',
@@ -498,3 +501,4 @@ function findSensitive(input, options = {}) {
 }
 
 module.exports = { redact, redactObject, findSensitive, PATTERNS, SENSITIVE_KEYS };
+
