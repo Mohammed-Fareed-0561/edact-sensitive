@@ -443,6 +443,7 @@ test('every PATTERNS entry matches the exported TypeScript shape', () => {
   // Spot-check the specialised entries the type has to cover.
   const byName = Object.fromEntries(PATTERNS.map((p) => [p.name, p]));
   assert.equal(typeof byName.urlPassword.replacement, 'string');
+  assert.equal(typeof byName.connectionString.replacement, 'function');
   assert.equal(typeof byName.genericApiKey.replacement, 'function');
   assert.equal(typeof byName.urlQuerySecret.labelFor, 'function');
   assert.equal(typeof byName.authHeader.labelFor, 'function');
@@ -627,4 +628,121 @@ test('over-long AWS keys keep existing length boundaries', () => {
   // Word boundary still holds: a trailing lowercase letter breaks the match.
   const nonKey = `AKIA${awsBody16()}abc`;
   assert.equal(redact(`key ${nonKey}`), `key ${nonKey}`);
+});
+
+// --- Issue #35: genericApiKey left base64 tails (+ / =) unredacted ---
+
+test('genericApiKey redacts base64 values containing + in full', () => {
+  assert.equal(
+    redact('aws_secret_access_key = abcDEF123+GhIjKlMnOpQrStUvWx'),
+    'aws_secret_access_key = [API_KEY]'
+  );
+  assert.equal(redact('secret = abcDEF123+GhIjKlMnOpQrStUvWx'), 'secret = [API_KEY]');
+  assert.equal(redact('token = abcDEF123+GhIjKlMnOpQrStUvWx'), 'token = [API_KEY]');
+});
+
+test('genericApiKey redacts base64 padding at the end of a value', () => {
+  assert.equal(
+    redact('aws_secret_access_key = abcDEF1234567890Yz=='),
+    'aws_secret_access_key = [API_KEY]'
+  );
+  // A closing quote is not swallowed when the value ends in padding.
+  assert.equal(redact('secret = "abcDEF123+GhIjKlMnOpQrStUvWx=="'), 'secret = "[API_KEY]"');
+});
+
+test('genericApiKey redacts a value made of + / = plus alphanumerics', () => {
+  assert.equal(redact('token = ++==abcDEF123456'), 'token = [API_KEY]');
+  // The 8-character minimum still applies to short values.
+  assert.equal(redact('secret = abc=='), 'secret = abc==');
+});
+
+// --- Issue #23: redactObject silently dropped symbol-keyed properties ---
+
+test('redactObject preserves symbol-keyed properties and redacts their values', () => {
+  const sym = Symbol('note');
+  const out = redactObject({ user: 'ana', [sym]: 'contact ana@example.com' });
+  assert.equal(Object.getOwnPropertySymbols(out).length, 1);
+  assert.equal(out[sym], 'contact [EMAIL]');
+});
+
+test('redactObject redacts values under symbol keys with sensitive descriptions', () => {
+  const symPassword = Symbol('password');
+  assert.equal(redactObject({ [symPassword]: 'hunter2' })[symPassword], '[PASSWORD]');
+  const symApiKey = Symbol('api_key');
+  assert.equal(redactObject({ [symApiKey]: 'hunter2' })[symApiKey], '[API_KEY]');
+  // A symbol with no description is preserved and content-redacted.
+  const symAnon = Symbol();
+  assert.equal(redactObject({ [symAnon]: 'ana@example.com' })[symAnon], '[EMAIL]');
+});
+
+test('redactObject recurses into objects stored under symbol keys', () => {
+  const sym = Symbol('meta');
+  const out = redactObject({ [sym]: { email: 'a@b.com' } });
+  assert.deepEqual(out[sym], { email: '[EMAIL]' });
+});
+
+test('redactObject treats non-enumerable keys the same for symbols and strings', () => {
+  const sym = Symbol('hidden');
+  const input = { visible: 'ana@example.com' };
+  Object.defineProperty(input, sym, { value: 'hunter2', enumerable: false });
+  Object.defineProperty(input, 'hiddenString', { value: 'hunter2', enumerable: false });
+  const out = redactObject(input);
+  assert.equal(Object.getOwnPropertySymbols(out).length, 0);
+  assert.equal('hiddenString' in out, false);
+  assert.equal(out.visible, '[EMAIL]');
+});
+
+test('redactObject handles a symbol-keyed self-reference without throwing', () => {
+  const sym = Symbol('self');
+  const input = { name: 'ana' };
+  input[sym] = input;
+  const out = redactObject(input);
+  assert.equal(out[sym], '[Circular]');
+});
+
+// --- Connection strings: passwords in mongodb / postgres / mysql / redis / amqp URLs ---
+
+test('redacts passwords in connection strings, keeping scheme, user and host', () => {
+  assert.equal(redact('mongodb://user:PASS@host'), 'mongodb://user:[PASSWORD]@host');
+  assert.equal(redact('postgres://user:PASS@host:5432/db'), 'postgres://user:[PASSWORD]@host:5432/db');
+  assert.equal(redact('mysql://user:PASS@host/db'), 'mysql://user:[PASSWORD]@host/db');
+  assert.equal(redact('amqp://guest:PASS@host/vhost'), 'amqp://guest:[PASSWORD]@host/vhost');
+  assert.equal(
+    redact('mongodb+srv://user:PASS@cluster.example.net/db'),
+    'mongodb+srv://user:[PASSWORD]@cluster.example.net/db'
+  );
+});
+
+test('redacts connection-string passwords when there is no username (redis style)', () => {
+  assert.equal(redact('redis://:PASS@host:6379'), 'redis://:[PASSWORD]@host:6379');
+  assert.equal(redact('rediss://:PASS@host'), 'rediss://:[PASSWORD]@host');
+});
+
+test('redacts connection-string passwords containing special characters', () => {
+  // A password containing '@' is redacted in full, not just up to the '@'.
+  assert.equal(redact('postgres://user:p@ssw0rd@host/db'), 'postgres://user:[PASSWORD]@host/db');
+  assert.equal(redact('mysql://user:p@ss:w0rd!#$%&*@host/db'), 'mysql://user:[PASSWORD]@host/db');
+});
+
+test('connection strings without a password are left alone', () => {
+  assert.equal(redact('mongodb://user@host/db'), 'mongodb://user@host/db');
+  assert.equal(redact('mongodb://host:27017/db'), 'mongodb://host:27017/db');
+  assert.equal(redact('mongodb://user:@host/db'), 'mongodb://user:@host/db');
+});
+
+test('redacts every connection string in a longer string', () => {
+  assert.equal(
+    redact('primary mongodb://u1:PASS1@h1, replica postgres://u2:PASS2@h2 done'),
+    'primary mongodb://u1:[PASSWORD]@h1, replica postgres://u2:[PASSWORD]@h2 done'
+  );
+});
+
+test('connectionString respects except / keepLabels and is reported by findSensitive', () => {
+  assert.equal(
+    redact('mongodb://user:PASS@host', { except: ['connectionString', 'urlPassword'] }),
+    'mongodb://user:PASS@host'
+  );
+  assert.equal(redact('mongodb://user:PASS@host', { keepLabels: false }), 'mongodb://user:[REDACTED]@host');
+  const found = findSensitive('mongodb://user:PASS@host');
+  assert.ok(found.some((f) => f.type === 'connectionString'));
 });
