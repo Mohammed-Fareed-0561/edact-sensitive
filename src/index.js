@@ -146,7 +146,8 @@ const PATTERNS = [
   {
     name: 'awsAccessKey',
     label: '[AWS_KEY]',
-    regex: /\bAKIA[0-9A-Z]{16}\b/g,
+    // AKIA = long-term access key id; ASIA = temporary session credentials.
+    regex: /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/g,
   },
   {
     name: 'githubToken',
@@ -156,19 +157,24 @@ const PATTERNS = [
   {
     name: 'slackToken',
     label: '[TOKEN]',
-    regex: /\bxox[baprs]-[A-Za-z0-9-]{10,}\b/g,
+    // Slack tokens use several prefixes: xoxb/xoxa/xoxp/xoxr/xoxs (classic)
+    // and xoxe- (newer enterprise/token format).
+    regex: /\bxox[baprse]-[A-Za-z0-9-]{10,}\b/g,
   },
   {
     name: 'openaiKey',
     label: '[API_KEY]',
-    regex: /\bsk-(?:proj-)?[A-Za-z0-9]{20,}\b/g,
+    // sk-<body>, sk-proj-<body> (project keys) and sk-svcacct-<body> (service
+    // account keys) are all API keys.
+    regex: /\bsk-(?:proj-|svcacct-)?[A-Za-z0-9]{20,}\b/g,
   },
   {
     name: 'stripeKey',
     label: '[API_KEY]',
-    // Stripe secret keys: sk_live_... / sk_test_... (24+ chars after the
-    // prefix). Publishable keys (pk_live_...) are not secrets and are left alone.
-    regex: /\bsk_(?:live|test)_[A-Za-z0-9]{24,}\b/g,
+    // Stripe secret keys: sk_live_... / sk_test_... plus restricted keys
+    // rk_live_... / rk_test_... (24+ chars after the prefix). Publishable
+    // keys (pk_live_... / pk_test_...) are not secrets and are left alone.
+    regex: /\b[sr]k_(?:live|test)_[A-Za-z0-9]{24,}\b/g,
   },
   {
     name: 'privateKey',
