@@ -147,7 +147,8 @@ const PATTERNS = [
     name: 'awsAccessKey',
     label: '[AWS_KEY]',
     // AKIA = long-term access key id; ASIA = temporary session credentials.
-    regex: /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/g,
+    // Allow suffixes longer than the standard 16 chars so over-long ids still redact.
+    regex: /\b(?:AKIA|ASIA)[0-9A-Z]{16,}\b/g,
   },
   {
     name: 'githubToken',

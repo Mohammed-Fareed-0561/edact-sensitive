@@ -602,3 +602,29 @@ test('new formats keep existing controls: publishable keys stay, old formats sti
   // Existing OpenAI project keys still work beside svcacct.
   assert.equal(redact(`key sk-proj-${body24()}`), 'key [API_KEY]');
 });
+
+// --- Issue #39: over-long AKIA/ASIA access key ids ---
+
+// Deliberately obvious placeholders built at runtime (no key-shaped literals).
+const awsBody17 = () => 'A1'.repeat(8) + 'Z'; // 17 chars -> 21 total
+const awsBody24 = () => 'A1'.repeat(12);      // 24 chars -> 28 total
+
+test('redacts over-long AKIA/ASIA access key ids as AWS keys', () => {
+  for (const prefix of ['AKIA', 'ASIA']) {
+    for (const body of [awsBody17(), awsBody24()]) {
+      assert.equal(redact(`key ${prefix}${body}`), 'key [AWS_KEY]');
+      const found = findSensitive(`key ${prefix}${body}`);
+      assert.ok(found.some((f) => f.type === 'awsAccessKey'));
+    }
+  }
+});
+
+test('over-long AWS keys keep existing length boundaries', () => {
+  // The standard 20-char key still redacts.
+  assert.equal(redact(`key AKIA${awsBody16()}`), 'key [AWS_KEY]');
+  // Too-short values are left alone.
+  assert.equal(redact(`key AKIA${'A1'.repeat(4)}`), `key AKIA${'A1'.repeat(4)}`);
+  // Word boundary still holds: a trailing lowercase letter breaks the match.
+  const nonKey = `AKIA${awsBody16()}abc`;
+  assert.equal(redact(`key ${nonKey}`), `key ${nonKey}`);
+});
