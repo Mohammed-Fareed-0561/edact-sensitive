@@ -18,6 +18,10 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- The API-key patterns now cover newer token formats: Stripe restricted keys
+  (`rk_live_...`, `rk_test_...`), OpenAI service account keys (`sk-svcacct-...`),
+  Slack `xoxe-...` tokens and AWS temporary session keys (`ASIA...`)
+  ([#37](https://github.com/sharkohark1234/redact-sensitive/issues/37)).
 - The email pattern no longer stalls on long digit-dash runs with no `@`
   (quadratic-time behaviour)
   ([#24](https://github.com/sharkohark1234/redact-sensitive/issues/24)).

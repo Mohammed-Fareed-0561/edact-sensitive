@@ -554,3 +554,51 @@ test('plain secret = ... still works and unrelated compound names are untouched'
   assert.equal(redact('secret = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY'), 'secret = [API_KEY]');
   assert.equal(redact('secret_access_key_id = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY'), 'secret_access_key_id = wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY');
 });
+
+// --- Issue #37: newer Stripe / OpenAI / Slack / AWS token formats ---
+
+// Bodies are built at runtime so no key-shaped literal is committed (secret
+// scanners flag those). They are deliberately obvious placeholders.
+const body24 = () => 'a'.repeat(24);
+const body16 = () => 'ab'.repeat(8);
+const awsBody16 = () => 'A1'.repeat(8);
+
+test('redacts Stripe restricted keys (rk_live_ / rk_test_) as API keys', () => {
+  assert.equal(redact(`key rk_live_${body24()}`), 'key [API_KEY]');
+  assert.equal(redact(`key rk_test_${body24()}`), 'key [API_KEY]');
+  const found = findSensitive(`key rk_live_${body24()}`);
+  assert.ok(found.some((f) => f.type === 'stripeKey'));
+});
+
+test('redacts OpenAI service account keys (sk-svcacct-) as API keys', () => {
+  assert.equal(redact(`key sk-svcacct-${body24()}`), 'key [API_KEY]');
+  const found = findSensitive(`key sk-svcacct-${body24()}`);
+  assert.ok(found.some((f) => f.type === 'openaiKey'));
+});
+
+test('redacts Slack xoxe- tokens as tokens', () => {
+  assert.equal(redact(`value xoxe-${body16()}`), 'value [TOKEN]');
+  const found = findSensitive(`value xoxe-${body16()}`);
+  assert.ok(found.some((f) => f.type === 'slackToken'));
+});
+
+test('redacts AWS temporary session keys (ASIA...) as AWS keys', () => {
+  assert.equal(redact(`key ASIA${awsBody16()}`), 'key [AWS_KEY]');
+  const found = findSensitive(`key ASIA${awsBody16()}`);
+  assert.ok(found.some((f) => f.type === 'awsAccessKey'));
+});
+
+test('new formats keep existing controls: publishable keys stay, old formats still redact', () => {
+  // Stripe publishable keys are not secrets and must stay visible.
+  assert.equal(redact(`key pk_live_${body24()}`), `key pk_live_${body24()}`);
+  // Legacy formats keep working.
+  assert.equal(redact(`key sk_live_${body24()}`), 'key [API_KEY]');
+  assert.equal(redact('token ghp_abcdefghij1234567890'), 'token [TOKEN]');
+  assert.equal(redact('key AKIAIOSFODNN7EXAMPLE'), 'key [AWS_KEY]');
+  // Near misses of the new prefixes are not redacted.
+  assert.equal(redact('key rk_live_short'), 'key rk_live_short');
+  assert.equal(redact('key pk_test_' + body24()), 'key pk_test_' + body24());
+  assert.equal(redact('value xoxe-short'), 'value xoxe-short');
+  // Existing OpenAI project keys still work beside svcacct.
+  assert.equal(redact(`key sk-proj-${body24()}`), 'key [API_KEY]');
+});
