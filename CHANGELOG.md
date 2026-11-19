@@ -15,6 +15,11 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `ENCRYPTED PRIVATE KEY` blocks and truncated PEM blocks with no `END` line
   are now redacted as `[PRIVATE_KEY]`
   ([#21](https://github.com/sharkohark1234/redact-sensitive/issues/21)).
+- Passwords in database, cache and queue connection strings (`mongodb://`,
+  `mongodb+srv://`, `postgres://`, `mysql://`, `redis://`, `amqp://`) are
+  now redacted as `[PASSWORD]`, keeping the scheme, user and host readable.
+  This covers the no-username form (`redis://:pass@host`) and passwords
+  containing `@` or other special characters.
 
 ### Fixed
 
@@ -25,6 +30,14 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The email pattern no longer stalls on long digit-dash runs with no `@`
   (quadratic-time behaviour)
   ([#24](https://github.com/sharkohark1234/redact-sensitive/issues/24)).
+- The `key = value` pattern now redacts base64 secret values in full: a
+  `+` or `=` inside the value no longer leaves the tail unredacted
+  ([#35](https://github.com/sharkohark1234/redact-sensitive/issues/35)).
+- `redactObject` no longer drops symbol-keyed properties: enumerable
+  symbol keys are carried over, and a value stored under a symbol whose
+  description is a sensitive name (for example `Symbol('password')`) is
+  redacted outright
+  ([#23](https://github.com/sharkohark1234/redact-sensitive/issues/23)).
 
 ## [0.1.0]
 
