@@ -20,6 +20,9 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   now redacted as `[PASSWORD]`, keeping the scheme, user and host readable.
   This covers the no-username form (`redis://:pass@host`) and passwords
   containing `@` or other special characters.
+- Sentry DSNs are now redacted as `[DSN]` (only the public key; the ingest
+  host and project id stay readable) instead of being mangled by the email
+  pattern ([#55](https://github.com/sharkohark1234/redact-sensitive/issues/55)).
 
 ### Fixed
 

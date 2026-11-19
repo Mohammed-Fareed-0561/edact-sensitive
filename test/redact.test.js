@@ -746,3 +746,50 @@ test('connectionString respects except / keepLabels and is reported by findSensi
   const found = findSensitive('mongodb://user:PASS@host');
   assert.ok(found.some((f) => f.type === 'connectionString'));
 });
+
+// --- Issue #55: Sentry DSNs are redacted as DSNs, not mangled as emails ---
+
+test('redacts a hosted Sentry DSN key as a DSN, keeping host and project id', () => {
+  assert.equal(
+    redact('DSN https://abc123def456@o12345.ingest.sentry.io/67890'),
+    'DSN https://[DSN]@o12345.ingest.sentry.io/67890'
+  );
+});
+
+test('redacts a Sentry DSN with a region subdomain as a DSN', () => {
+  assert.equal(
+    redact('https://pubkey@o12345.ingest.us.sentry.io/42'),
+    'https://[DSN]@o12345.ingest.us.sentry.io/42'
+  );
+});
+
+test('redacts a self-hosted Sentry DSN as a DSN', () => {
+  assert.equal(
+    redact('https://pubkey@sentry.example.com/7'),
+    'https://[DSN]@sentry.example.com/7'
+  );
+});
+
+test('an ordinary email is still redacted as an email, not a DSN', () => {
+  assert.equal(redact('Contact ana@example.com'), 'Contact [EMAIL]');
+  const found = findSensitive('Contact ana@example.com', { only: ['sentryDsn', 'email'] });
+  assert.deepEqual(found.map((f) => f.type), ['email']);
+});
+
+test('a Sentry DSN is reported by findSensitive as sentryDsn', () => {
+  const found = findSensitive('https://abc123@o1.ingest.sentry.io/9', { only: ['sentryDsn'] });
+  assert.deepEqual(found.map((f) => f.type), ['sentryDsn']);
+});
+
+test('sentryDsn honours only / except / keepLabels', () => {
+  const dsn = 'https://abc123@o1.ingest.sentry.io/9';
+  assert.equal(redact(dsn, { except: ['sentryDsn'] }), 'https://[EMAIL]/9');
+  assert.equal(redact(dsn, { keepLabels: false, replacement: '***' }), 'https://***@o1.ingest.sentry.io/9');
+  assert.equal(redact(dsn, { labels: { sentryDsn: '[S]' } }), 'https://[S]@o1.ingest.sentry.io/9');
+});
+
+test('a URL with userinfo but no numeric project id is not mistaken for a DSN', () => {
+  assert.deepEqual(findSensitive('https://user@example.com/path', { only: ['sentryDsn'] }), []);
+  // The email inside it is still redacted as an email, not as a DSN.
+  assert.equal(redact('https://user@example.com/path'), 'https://[EMAIL]/path');
+});

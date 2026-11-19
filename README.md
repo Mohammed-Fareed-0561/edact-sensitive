@@ -103,6 +103,7 @@ findSensitive('mail a@b.com, card 4111111111111111', { only: ['email'] });
 | Type | Example |
 | --- | --- |
 | Email | `ana@example.com` → `[EMAIL]` |
+| Sentry DSNs | `https://key@o1.ingest.sentry.io/42` → key only → `[DSN]` (host and project id stay readable) |
 | Phone | `+1 555-123-4567`, `+91 98765 43210` → `[PHONE]` |
 | Credit card | Luhn-validated, 13–19 digits → `[CARD]` |
 | IBAN | Country length and checksum validated, `DE89 3704 0044 0532 0130 00` → `[IBAN]` |
