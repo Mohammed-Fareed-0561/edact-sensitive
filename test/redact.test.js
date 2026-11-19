@@ -40,6 +40,38 @@ test('redacts GitHub, OpenAI and AWS-style keys', () => {
   assert.equal(redact('key AKIAIOSFODNN7EXAMPLE'), 'key [AWS_KEY]');
 });
 
+test('redacts ENCRYPTED PRIVATE KEY blocks', () => {
+  assert.equal(
+    redact('-----BEGIN ENCRYPTED PRIVATE KEY-----\nMIIBvTCCAUY=\n-----END ENCRYPTED PRIVATE KEY-----'),
+    '[PRIVATE_KEY]'
+  );
+});
+
+test('redacts a truncated private key block that has no END line', () => {
+  assert.equal(
+    redact('key dump:\n-----BEGIN PRIVATE KEY-----\nMIIBvTCCAUYgAwIBAgI='),
+    'key dump:\n[PRIVATE_KEY]'
+  );
+  assert.equal(
+    redact('-----BEGIN RSA PRIVATE KEY-----\nMIIBvTCCAUYgAwIBAgIMIIBvTCCAUYgAwIBAgI\nMIIBvTCCAUYgAwIBAgIMIIBvTCCAUYgAwIBAgI'),
+    '[PRIVATE_KEY]'
+  );
+});
+
+test('a truncated private key block does not swallow the text after it', () => {
+  assert.equal(
+    redact('-----BEGIN PRIVATE KEY-----\nMIIBvTCCAUYgAwIBAgI=\nnext log line'),
+    '[PRIVATE_KEY]\nnext log line'
+  );
+});
+
+test('two complete private key blocks are redacted separately', () => {
+  assert.equal(
+    redact('-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\nkeep\n-----BEGIN EC PRIVATE KEY-----\nBBBB\n-----END EC PRIVATE KEY-----'),
+    '[PRIVATE_KEY]\nkeep\n[PRIVATE_KEY]'
+  );
+});
+
 test('redacts a password inside a URL only, keeping the rest', () => {
   assert.equal(
     redact('https://user:hunter2@example.com/x'),

@@ -163,7 +163,10 @@ const PATTERNS = [
   {
     name: 'privateKey',
     label: '[PRIVATE_KEY]',
-    regex: /-----BEGIN (?:RSA |EC |OPENSSH |PGP )?PRIVATE KEY-----[\s\S]*?-----END (?:RSA |EC |OPENSSH |PGP )?PRIVATE KEY-----/g,
+    // A complete BEGIN...END block is replaced whole. If there is no END line
+    // (a log line cut off mid-key), the header plus the base64 lines that
+    // follow it (16+ chars each, so ordinary words are not swallowed) are replaced.
+    regex: /-----BEGIN (?:ENCRYPTED |RSA |EC |OPENSSH |PGP )?PRIVATE KEY-----(?:[\s\S]*?-----END (?:ENCRYPTED |RSA |EC |OPENSSH |PGP )?PRIVATE KEY-----|(?:\r?\n[A-Za-z0-9+/]{16,}={0,2})*)/g,
   },
   {
     name: 'jwt',
