@@ -108,7 +108,7 @@ findSensitive('mail a@b.com, card 4111111111111111', { only: ['email'] });
 | IBAN | Country length and checksum validated, `DE89 3704 0044 0532 0130 00` → `[IBAN]` |
 | API keys | GitHub `ghp_…`, OpenAI `sk-…`, Stripe `sk_live_…` / `sk_test_…`, AWS `AKIA…`, Slack `xoxb-…` → `[TOKEN]` / `[API_KEY]` |
 | JWT | `eyJ…` → `[TOKEN]` |
-| Private key blocks | `-----BEGIN PRIVATE KEY-----` → `[PRIVATE_KEY]` |
+| Private key blocks | `-----BEGIN PRIVATE KEY-----` (also `ENCRYPTED`, `RSA`, `EC`, … and truncated blocks with no `END` line) → `[PRIVATE_KEY]` |
 | SSN | `123-45-6789` → `[SSN]` |
 | Indian PAN | `ABCDE1234F` → `[PAN]` |
 | IPv4 | `203.0.113.42` → `[IP]` |
