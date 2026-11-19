@@ -230,7 +230,7 @@ const PATTERNS = [
   {
     name: 'genericApiKey',
     label: '[API_KEY]',
-    regex: /\b(?:api[_-]?key|apikey|secret|token|passwd|password)\s*[:=]\s*['"]?([A-Za-z0-9_\-./]{8,})['"]?/gi,
+    regex: /\b(?:api[_-]?key|apikey|(?:aws[_-]?)?secret[_-]?access[_-]?key|secret|token|passwd|password)\s*[:=]\s*['"]?([A-Za-z0-9_\-./]{8,})['"]?/gi,
     // Receives the effective label as an extra final argument from redact(),
     // so keepLabels / options.labels are honoured here too.
     replacement: (match, _value, _offset, _string, label) =>
