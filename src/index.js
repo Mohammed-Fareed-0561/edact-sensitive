@@ -101,6 +101,28 @@ const QUERY_PARAM_LABELS = {
 
 const PATTERNS = [
   {
+    name: 'connectionString',
+    label: '[PASSWORD]',
+    // Database / cache / queue connection strings:
+    // mongodb://user:pass@host, postgres://user:pass@host:5432/db,
+    // redis://:pass@host (no username), amqp://user:pass@host/vhost.
+    // Only the password is replaced; scheme, user and host stay readable.
+    // The userinfo is captured greedily up to the last '@' before the
+    // host, because a password may itself contain '@' or ':' — the
+    // simpler urlPassword shape below stops at the first '@' and cannot
+    // handle a missing username, so this pattern runs first.
+    regex: /\b((?:mongodb(?:\+srv)?|postgres(?:ql)?|mysql2?|rediss?|amqps?):\/\/)([^\s/,]+)@([^\s/:,]+)/gi,
+    // Receives the effective label as an extra final argument from
+    // redact(), so keepLabels / options.labels are honoured here too.
+    replacement: (match, prefix, userinfo, host, _offset, _string, label) => {
+      const colon = userinfo.indexOf(':');
+      // No ':' means userinfo is a bare username with no password, and a
+      // trailing ':' means an empty password — nothing to redact.
+      if (colon === -1 || colon === userinfo.length - 1) return match;
+      return `${prefix}${userinfo.slice(0, colon + 1)}${label || '[PASSWORD]'}@${host}`;
+    },
+  },
+  {
     name: 'urlPassword',
     label: '[PASSWORD]',
     // https://user:password@host — redact only the password part.
@@ -237,11 +259,15 @@ const PATTERNS = [
   {
     name: 'genericApiKey',
     label: '[API_KEY]',
-    regex: /\b(?:api[_-]?key|apikey|(?:aws[_-]?)?secret[_-]?access[_-]?key|secret|token|passwd|password)\s*[:=]\s*['"]?([A-Za-z0-9_\-./]{8,})['"]?/gi,
+    // The value class includes '+' and '=' because real secret values are
+    // often base64 (AWS secret access keys are), and base64 uses both —
+    // without them only the first run was replaced and the tail leaked (#35).
+    // Quotes are not in the class, so a closing quote is never swallowed.
+    regex: /\b(?:api[_-]?key|apikey|(?:aws[_-]?)?secret[_-]?access[_-]?key|secret|token|passwd|password)\s*[:=]\s*['"]?([A-Za-z0-9_\-./+=]{8,})['"]?/gi,
     // Receives the effective label as an extra final argument from redact(),
     // so keepLabels / options.labels are honoured here too.
     replacement: (match, _value, _offset, _string, label) =>
-      match.replace(/([:=]\s*['"]?)[A-Za-z0-9_\-./]{8,}(['"]?)/, `$1${label || '[API_KEY]'}$2`),
+      match.replace(/([:=]\s*['"]?)[A-Za-z0-9_\-./+=]{8,}(['"]?)/, `$1${label || '[API_KEY]'}$2`),
   },
 ];
 
@@ -344,6 +370,18 @@ function redactObjectInternal(value, options, seen, depth) {
       // its type — replace it outright instead of recursing into it.
       const label = sensitiveKeyLabel(key, options);
       out[key] = label !== null ? label : redactObjectInternal(val, options, seen, depth + 1);
+    }
+    // Object.entries skips symbol keys, which used to drop those
+    // properties entirely (#23). Carry enumerable symbol keys over with
+    // the same rules as string keys: the symbol's description is checked
+    // against the sensitive key names, so Symbol('password') redacts
+    // outright, and any other value is recursed into as usual.
+    // Non-enumerable properties are not copied, for symbol keys exactly
+    // as for string keys.
+    for (const sym of Object.getOwnPropertySymbols(value)) {
+      if (!Object.prototype.propertyIsEnumerable.call(value, sym)) continue;
+      const label = sym.description ? sensitiveKeyLabel(sym.description, options) : null;
+      out[sym] = label !== null ? label : redactObjectInternal(value[sym], options, seen, depth + 1);
     }
     seen.delete(value);
     return out;
