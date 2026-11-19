@@ -38,14 +38,17 @@ redact('Card 4111 1111 1111 1111, key sk-abcdefghij1234567890abcd');
 <tr><td>Credit card</td><td>Luhn-validated → [CARD]</td></tr>
 <tr><td>IBAN</td><td>Country length and checksum validated, DE89 3704 0044 0532 0130 00 → [IBAN]</td></tr>
 <tr><td>API keys</td><td>GitHub, OpenAI, Stripe, AWS, Slack tokens</td></tr>
-<tr><td>JWT &amp; private keys</td><td>eyJ… and PEM blocks</td></tr>
+<tr><td>JWT</td><td>eyJ… → [TOKEN]</td></tr>
+<tr><td>Private key blocks</td><td>-----BEGIN PRIVATE KEY----- (also ENCRYPTED, RSA, EC, … and truncated blocks with no END line) → [PRIVATE_KEY]</td></tr>
 <tr><td>SSN, IPv4, URL passwords</td><td>123-45-6789, 203.0.113.42, user:pass@host</td></tr>
 <tr><td>Indian PAN</td><td>ABCDE1234F → [PAN]</td></tr>
 <tr><td>URL query-string secrets</td><td>?token=abc123&amp;user=ana → ?token=[TOKEN]&amp;user=ana</td></tr>
 <tr><td>Authorization headers</td><td>Authorization: Bearer abc → Authorization: Bearer [TOKEN]; Basic … → [CREDENTIALS]</td></tr>
+<tr><td>key = value secrets</td><td>api_key = …, aws_secret_access_key = … → api_key = [API_KEY]</td></tr>
 </table>
 <h2>Why</h2>
 <p>Logs, error reports and support tickets routinely leak the data they were meant to debug. One <code>console.log(user)</code> can put an email, a token or a card number into a log store. This library is a one-line safety net: run untrusted text through it before logging, storing or sending it anywhere.</p>
 <p><a href="https://github.com/sharkohark1234/redact-sensitive">Contribute on GitHub</a> — good first issues are welcome. MIT licensed.</p>
 </body>
 </html>
+
