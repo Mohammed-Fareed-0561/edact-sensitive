@@ -106,7 +106,7 @@ findSensitive('mail a@b.com, card 4111111111111111', { only: ['email'] });
 | Phone | `+1 555-123-4567`, `+91 98765 43210` → `[PHONE]` |
 | Credit card | Luhn-validated, 13–19 digits → `[CARD]` |
 | IBAN | Country length and checksum validated, `DE89 3704 0044 0532 0130 00` → `[IBAN]` |
-| API keys | GitHub `ghp_…`, OpenAI `sk-…`, AWS `AKIA…`, Slack `xoxb-…` → `[TOKEN]` / `[API_KEY]` |
+| API keys | GitHub `ghp_…`, OpenAI `sk-…`, Stripe `sk_live_…` / `sk_test_…`, AWS `AKIA…`, Slack `xoxb-…` → `[TOKEN]` / `[API_KEY]` |
 | JWT | `eyJ…` → `[TOKEN]` |
 | Private key blocks | `-----BEGIN PRIVATE KEY-----` (also `ENCRYPTED`, `RSA`, `EC`, … and truncated blocks with no `END` line) → `[PRIVATE_KEY]` |
 | SSN | `123-45-6789` → `[SSN]` |

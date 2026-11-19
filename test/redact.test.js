@@ -40,6 +40,15 @@ test('redacts GitHub, OpenAI and AWS-style keys', () => {
   assert.equal(redact('key AKIAIOSFODNN7EXAMPLE'), 'key [AWS_KEY]');
 });
 
+test('redacts Stripe secret keys but not publishable keys', () => {
+  // Built at runtime so no key-shaped literal is committed (secret scanners flag those).
+  const body = 'a'.repeat(24);
+  assert.equal(redact(`key sk_live_${body}`), 'key [API_KEY]');
+  assert.equal(redact(`key sk_test_${body}`), 'key [API_KEY]');
+  assert.equal(redact(`key pk_live_${body}`), `key pk_live_${body}`);
+  assert.equal(redact('key sk_live_short'), 'key sk_live_short');
+});
+
 test('redacts ENCRYPTED PRIVATE KEY blocks', () => {
   assert.equal(
     redact('-----BEGIN ENCRYPTED PRIVATE KEY-----\nMIIBvTCCAUY=\n-----END ENCRYPTED PRIVATE KEY-----'),
@@ -70,6 +79,7 @@ test('two complete private key blocks are redacted separately', () => {
     redact('-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\nkeep\n-----BEGIN EC PRIVATE KEY-----\nBBBB\n-----END EC PRIVATE KEY-----'),
     '[PRIVATE_KEY]\nkeep\n[PRIVATE_KEY]'
   );
+
 });
 
 test('redacts a password inside a URL only, keeping the rest', () => {
