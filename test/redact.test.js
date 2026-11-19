@@ -518,3 +518,23 @@ test('redaction still works inside nested objects and arrays after the circular/
     }
   );
 });
+
+// --- Issue #24: email regex was quadratic on long digit-dash runs ---
+
+test('email pattern stays fast on a long digit-dash run with no @', () => {
+  const input = '1-'.repeat(40000); // 80k chars
+  const start = process.hrtime.bigint();
+  const out = redact(input, { only: ['email'] });
+  const ms = Number(process.hrtime.bigint() - start) / 1e6;
+  assert.equal(out, input);
+  // Was several seconds before the fix; generous bound to avoid CI flakiness.
+  assert.ok(ms < 1000, `redaction took ${ms.toFixed(0)} ms`);
+});
+
+test('a real email at the end of a long digit-dash run is still redacted', () => {
+  assert.equal(
+    redact('1-'.repeat(1000) + 'ana@example.com', { only: ['email'] }),
+    '[EMAIL]'
+  );
+  assert.equal(redact('id 1-2-3 mail ana-b@example.com', { only: ['email'] }), 'id 1-2-3 mail [EMAIL]');
+});
