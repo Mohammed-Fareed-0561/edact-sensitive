@@ -138,7 +138,10 @@ const PATTERNS = [
   {
     name: 'email',
     label: '[EMAIL]',
-    regex: /(?<![A-Za-z0-9._%+\[\]])[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g,
+    // The lookbehind lists every local-part character (including `-`) so a match
+    // can only start at the beginning of a run; otherwise a long digit-dash run
+    // with no `@` is re-scanned from every position (quadratic).
+    regex: /(?<![A-Za-z0-9._%+\[\]-])[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g,
   },
   {
     name: 'awsAccessKey',
