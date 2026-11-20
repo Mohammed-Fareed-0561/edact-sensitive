@@ -99,6 +99,71 @@ const QUERY_PARAM_LABELS = {
   pwd: '[PASSWORD]',
 };
 
+// Cookie names whose values are session identifiers, matched by the
+// normalised name (lower-case, '_'/'-' stripped) — the same care as
+// QUERY_PARAM_LABELS — so `session_id`, `session-id` and `sessionId`
+// all match, while `mysession` or `sessionid2` do not.
+const SESSION_COOKIE_NAMES = new Set([
+  'session',
+  'sessionid',
+  'sessiontoken',
+  'sid',
+  'auth',
+  'authtoken',
+  'token',
+  'accesstoken',
+  'refreshtoken',
+  'idtoken',
+]);
+
+// Redact the values of session-like cookies inside one Cookie /
+// Set-Cookie header value, keeping everything else readable: cookie
+// names, harmless cookies (`theme=dark`), flag attributes with no value
+// (`HttpOnly`, `Secure`) and attributes with harmless values
+// (`Path=/`, `Expires=...`, `Max-Age=3600`, `SameSite=Lax`).
+// Pairs are split on ';'; a session value runs to the next ';', or to a
+// ',' when headers are comma-joined on one log line (commas are not
+// valid in cookie values, so a session value never contains one).
+// An empty value has nothing to leak and is left alone.
+function redactCookieHeaderValue(headerValue, label) {
+  return headerValue
+    .split(';')
+    .map((part) => {
+      const eq = part.indexOf('=');
+      if (eq === -1) return part;
+      if (!SESSION_COOKIE_NAMES.has(normalizeKeyName(part.slice(0, eq).trim()))) return part;
+      const raw = part.slice(eq + 1);
+      const leading = (raw.match(/^\s*/) || [''])[0];
+      const trailing = (raw.match(/\s*$/) || [''])[0];
+      const core = raw.slice(leading.length, raw.length - trailing.length);
+      if (core === '') return part;
+      let value;
+      let rest = '';
+      if (core.startsWith('"')) {
+        const closing = core.indexOf('"', 1);
+        if (closing === -1) return part;
+        value = `"${label}"`;
+        rest = core.slice(closing + 1);
+      } else {
+        // An unquoted cookie value is a run of cookie-octets (RFC 6265):
+        // a double-quote cannot occur inside it, so a '"' after the value
+        // is the closing quote of surrounding log syntax (e.g. a JSON
+        // string), not part of the value — stop there too, keeping it
+        // untouched. Same for ',' separating combined cookie headers.
+        const comma = core.indexOf(',');
+        const quote = core.indexOf('"');
+        const cut = [comma, quote].filter((i) => i !== -1);
+        const end = cut.length === 0 ? -1 : Math.min(...cut);
+        const valuePart = end === -1 ? core : core.slice(0, end);
+        if (valuePart === '') return part;
+        value = label;
+        rest = end === -1 ? '' : core.slice(end);
+      }
+      return `${part.slice(0, eq + 1)}${leading}${value}${rest}${trailing}`;
+    })
+    .join(';');
+}
+
 const PATTERNS = [
   {
     name: 'connectionString',
@@ -164,6 +229,21 @@ const PATTERNS = [
       const label = scheme.toLowerCase() === 'basic' ? '[CREDENTIALS]' : '[TOKEN]';
       return [header + colon + afterColon + scheme + afterScheme, label];
     },
+  },
+  {
+    name: 'sessionCookie',
+    label: '[TOKEN]',
+    // Session cookie values in `Cookie` / `Set-Cookie` header lines:
+    // `Cookie: session=<id>; theme=dark` redacts only the value of a
+    // session-like cookie name (see SESSION_COOKIE_NAMES). Cookie names,
+    // harmless cookies and Set-Cookie attributes stay readable.
+    // Runs before genericApiKey / email / phone so a session value is
+    // never mangled by another pattern first.
+    regex: /\b((?:Set-Cookie|Cookie):[ \t]*)([^\r\n]*)/gi,
+    // Receives the effective label as an extra final argument from
+    // redact(), so keepLabels / options.labels are honoured here too.
+    replacement: (match, prefix, headerValue, _offset, _string, label) =>
+      prefix + redactCookieHeaderValue(headerValue, label || '[TOKEN]'),
   },
   {
     name: 'sentryDsn',
@@ -509,4 +589,5 @@ function findSensitive(input, options = {}) {
 }
 
 module.exports = { redact, redactObject, findSensitive, PATTERNS, SENSITIVE_KEYS };
+
 

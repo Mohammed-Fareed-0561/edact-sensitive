@@ -382,6 +382,112 @@ test('other auth schemes are left alone', () => {
   assert.equal(redact('Authorization: Bearer'), 'Authorization: Bearer');
 });
 
+// --- Issue #56: session cookie values in Cookie / Set-Cookie headers ---
+
+test('redacts session cookie values, keeping harmless cookies', () => {
+  assert.equal(
+    redact('Cookie: session=abc123; theme=dark'),
+    'Cookie: session=[TOKEN]; theme=dark'
+  );
+  assert.equal(
+    redact('Cookie: theme=dark; sid=abc123; lang=en'),
+    'Cookie: theme=dark; sid=[TOKEN]; lang=en'
+  );
+  assert.equal(
+    redact('Cookie: token=abc123; prefs=compact'),
+    'Cookie: token=[TOKEN]; prefs=compact'
+  );
+});
+
+test('redacts Set-Cookie session values, keeping attributes readable', () => {
+  assert.equal(
+    redact('Set-Cookie: sid=abc123; HttpOnly; Path=/'),
+    'Set-Cookie: sid=[TOKEN]; HttpOnly; Path=/'
+  );
+  assert.equal(
+    redact('Set-Cookie: session=abc123; Expires=Wed, 21 Oct 2026 07:28:00 GMT; Secure; SameSite=Lax; Max-Age=3600'),
+    'Set-Cookie: session=[TOKEN]; Expires=Wed, 21 Oct 2026 07:28:00 GMT; Secure; SameSite=Lax; Max-Age=3600'
+  );
+});
+
+test('session cookie names match like query params: separators and case ignored', () => {
+  assert.equal(redact('Cookie: session_id=abc123'), 'Cookie: session_id=[TOKEN]');
+  assert.equal(redact('Cookie: session-id=abc123'), 'Cookie: session-id=[TOKEN]');
+  assert.equal(redact('Cookie: sessionId=abc123'), 'Cookie: sessionId=[TOKEN]');
+  assert.equal(redact('Cookie: SESSIONID=abc123'), 'Cookie: SESSIONID=[TOKEN]');
+  assert.equal(redact('Cookie: SID=abc123'), 'Cookie: SID=[TOKEN]');
+  assert.equal(redact('Cookie: auth=abc123'), 'Cookie: auth=[TOKEN]');
+  assert.equal(redact('Cookie: access_token=abc123'), 'Cookie: access_token=[TOKEN]');
+});
+
+test('session cookie header names are case-insensitive', () => {
+  assert.equal(redact('cookie: session=abc123'), 'cookie: session=[TOKEN]');
+  assert.equal(redact('COOKIE: session=abc123'), 'COOKIE: session=[TOKEN]');
+  assert.equal(redact('set-cookie: sid=abc123; HttpOnly'), 'set-cookie: sid=[TOKEN]; HttpOnly');
+});
+
+test('session cookie false positives stay untouched', () => {
+  // The cookie name must match exactly: longer names are not sessions.
+  assert.equal(redact('Cookie: mysession=abc123'), 'Cookie: mysession=abc123');
+  assert.equal(redact('Cookie: sessionid2=abc123'), 'Cookie: sessionid2=abc123');
+  assert.equal(redact('Cookie: tokenized=abc123'), 'Cookie: tokenized=abc123');
+  assert.equal(redact('Cookie: authuser=ana'), 'Cookie: authuser=ana');
+  // A session word outside a Cookie header is not a cookie.
+  assert.equal(redact('your session is abc123'), 'your session is abc123');
+  // An empty value has nothing to leak.
+  assert.equal(redact('Cookie: session=; theme=dark'), 'Cookie: session=; theme=dark');
+  // A cookie with no '=' at all is a flag, not a value.
+  assert.equal(redact('Set-Cookie: theme=dark; HttpOnly'), 'Set-Cookie: theme=dark; HttpOnly');
+});
+
+test('session cookie redaction handles quoted values and longer log lines', () => {  assert.equal(
+    redact('Cookie: session="abc123"; theme=dark'),
+    'Cookie: session="[TOKEN]"; theme=dark'
+  );
+  assert.equal(
+    redact('request headers: Cookie: session=abc123; theme=dark, Content-Type: text/plain'),
+    'request headers: Cookie: session=[TOKEN]; theme=dark, Content-Type: text/plain'
+  );
+  assert.deepEqual(
+    redactObject({ headers: 'Cookie: session=abc123; theme=dark' }),
+    { headers: 'Cookie: session=[TOKEN]; theme=dark' }
+  );
+  // Two header lines in one log are both redacted.
+  assert.equal(
+    redact('Cookie: session=abc123\nSet-Cookie: sid=def456; HttpOnly'),
+    'Cookie: session=[TOKEN]\nSet-Cookie: sid=[TOKEN]; HttpOnly'
+  );
+});
+
+test('unquoted session cookie value does not swallow a closing quote', () => {
+  // '"' is not a cookie-octet (RFC 6265), so an unquoted value ends at
+  // the closing quote of surrounding log syntax (e.g. a JSON string)
+  // and that syntax is kept untouched.
+  assert.equal(
+    redact('{"headers": "Cookie: session=abc123"}'),
+    '{"headers": "Cookie: session=[TOKEN]"}'
+  );
+  assert.equal(
+    redact('{"headers": "Set-Cookie: sid=abc123; HttpOnly"}'),
+    '{"headers": "Set-Cookie: sid=[TOKEN]; HttpOnly"}'
+  );
+});
+
+test('session cookie redaction respects only / except / keepLabels and is reported by findSensitive', () => {
+  assert.equal(redact('Cookie: session=abc123', { only: ['email'] }), 'Cookie: session=abc123');
+  assert.equal(redact('Cookie: session=abc123', { except: ['sessionCookie'] }), 'Cookie: session=abc123');
+  assert.equal(
+    redact('Cookie: session=abc123', { keepLabels: false, replacement: '***' }),
+    'Cookie: session=***'
+  );
+  assert.equal(
+    redact('Cookie: session=abc123', { labels: { sessionCookie: '[S]' } }),
+    'Cookie: session=[S]'
+  );
+  const found = findSensitive('Cookie: session=abc123; theme=dark');
+  assert.ok(found.some((f) => f.type === 'sessionCookie'));
+});
+
 test('findSensitive reports the new pattern types', () => {
   const found = findSensitive('?token=abc123 and Authorization: Bearer xyz');
   assert.deepEqual(
