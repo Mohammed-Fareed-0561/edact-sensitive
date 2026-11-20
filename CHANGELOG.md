@@ -32,6 +32,9 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Session cookie values in `Cookie` / `Set-Cookie` headers are now redacted
   as `[TOKEN]` for known session cookie names only
   ([#56](https://github.com/sharkohark1234/redact-sensitive/issues/56)).
+- Mailchimp API keys (`<32 hex>-us<1-2 digits>`) are now redacted as
+  `[API_KEY]`; a bare 32-character hex string is left untouched
+  ([#44](https://github.com/sharkohark1234/redact-sensitive/issues/44)).
 
 ### Fixed
 
