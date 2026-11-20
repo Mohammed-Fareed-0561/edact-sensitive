@@ -23,6 +23,15 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Sentry DSNs are now redacted as `[DSN]` (only the public key; the ingest
   host and project id stay readable) instead of being mangled by the email
   pattern ([#55](https://github.com/sharkohark1234/redact-sensitive/issues/55)).
+- GitHub fine-grained personal access tokens (`github_pat_...`) are now
+  redacted as `[TOKEN]`
+  ([#36](https://github.com/sharkohark1234/redact-sensitive/issues/36)).
+- Slack incoming webhook URLs (`https://hooks.slack.com/services/...`,
+  including GovSlack) are now redacted as `[WEBHOOK]`
+  ([#52](https://github.com/sharkohark1234/redact-sensitive/issues/52)).
+- Session cookie values in `Cookie` / `Set-Cookie` headers are now redacted
+  as `[TOKEN]` for known session cookie names only
+  ([#56](https://github.com/sharkohark1234/redact-sensitive/issues/56)).
 
 ### Fixed
 
@@ -52,3 +61,4 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `Authorization` headers, and `key = value` secrets.
 - `redact()`, `redactObject()` and `findSensitive()`, with `only` / `except` /
   `labels` / `custom` options and TypeScript types.
+
