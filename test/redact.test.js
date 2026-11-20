@@ -980,3 +980,37 @@ test('findSensitive reports webhook type, full value, and log offset', () => {
   ]);
   assert.deepEqual(findSensitive(url, { except: ['slackWebhook'] }), []);
 });
+
+// --- Issue #44: Mailchimp API keys ---
+
+// Obvious placeholder assembled at runtime so no key-shaped literal is
+// committed (secret scanners flag those): 32 lowercase hex chars + suffix.
+const mailchimpBody = () => 'a'.repeat(32);
+
+test('redacts Mailchimp API keys as API keys', () => {
+  const key = `${mailchimpBody()}-us14`;
+  assert.equal(redact(`key ${key}`), 'key [API_KEY]');
+  assert.equal(redact(`key ${mailchimpBody()}-us1`), 'key [API_KEY]');
+  const found = findSensitive(`key ${key}`);
+  assert.ok(found.some((f) => f.type === 'mailchimpKey' && f.value === key));
+});
+
+test('leaves a bare 32-character hex string (likely a hash) untouched', () => {
+  const hash = mailchimpBody();
+  assert.equal(redact(`hash ${hash}`), `hash ${hash}`);
+  assert.deepEqual(findSensitive(hash, { only: ['mailchimpKey'] }), []);
+});
+
+test('Mailchimp key near misses stay untouched', () => {
+  const short = `${'a'.repeat(31)}-us14`;
+  const longSuffix = `${mailchimpBody()}-us140`;
+  assert.equal(redact(`key ${short}`), `key ${short}`);
+  assert.equal(redact(`key ${longSuffix}`), `key ${longSuffix}`);
+});
+
+test('mailchimpKey honours pattern filters and labels', () => {
+  const key = `${mailchimpBody()}-us14`;
+  assert.equal(redact(key, { except: ['mailchimpKey'] }), key);
+  assert.equal(redact(key, { labels: { mailchimpKey: '[MC]' } }), '[MC]');
+  assert.equal(redact(key, { keepLabels: false, replacement: '***' }), '***');
+});
