@@ -117,11 +117,14 @@ findSensitive('mail a@b.com, card 4111111111111111', { only: ['email'] });
 | Connection strings | `mongodb://user:pass@host`, `postgres://user:pass@host`, `redis://:pass@host` → password only → `[PASSWORD]` |
 | URL query-string secrets | `?token=abc123&user=ana` → `?token=[TOKEN]&user=ana` |
 | Authorization headers | `Authorization: Bearer abc` → `Authorization: Bearer [TOKEN]`; `Basic …` → `[CREDENTIALS]` |
+| Session cookie values | `Cookie: session=<id>; theme=dark` → `Cookie: session=[TOKEN]; theme=dark`; `Set-Cookie: sid=<id>; HttpOnly; Path=/` → `Set-Cookie: sid=[TOKEN]; HttpOnly; Path=/` |
 | `key = value` secrets | `api_key = abc123…`, `aws_secret_access_key = …` → `api_key = [API_KEY]` |
 
 Secrets in a URL query string are redacted only when the parameter name is a known secret name (`token`, `access_token`, `refresh_token`, `id_token`, `api_key`, `secret`, `client_secret`, `auth`, `authorization`, `password`, `passwd`, `pwd`, `session`, `sessionid`, with `_`/`-`/camelCase variants). Other parameters are left alone, as are similar-looking names such as `mytoken`. The label follows the parameter: tokens → `[TOKEN]`, API keys → `[API_KEY]`, secrets → `[SECRET]`, passwords → `[PASSWORD]`.
 
 `Authorization` and `Proxy-Authorization` headers are redacted only for the `Bearer` and `Basic` schemes — the header name and scheme stay readable, only the credential is replaced. Other schemes (`Negotiate`, `Digest`, …) are left alone: their tokens are session-bound challenge responses, not reusable static credentials.
+
+Session cookie values are redacted only when the cookie name is a known session name (`session`, `sessionid`, `sessiontoken`, `sid`, `auth`, `token`, `access_token`, `refresh_token`, `id_token`, with `_`/`-`/camelCase variants) in `Cookie` and `Set-Cookie` headers. Cookie names, harmless cookies and `Set-Cookie` attributes (`HttpOnly`, `Path`, `Expires`, …) are left alone, as are similar-looking names such as `mysession`.
 
 Credit cards are only redacted when they pass the Luhn check, so a random 16-digit order number is left alone. Phone numbers need at least 7 digits. Indian PAN numbers are matched in their five-letter, four-digit, one-letter form.
 
@@ -144,5 +147,6 @@ redact-sensitive exists thanks to everyone who has contributed code, fixes and i
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
 
 
