@@ -276,6 +276,16 @@ const PATTERNS = [
     regex: /\b(?:AKIA|ASIA)[0-9A-Z]{16,}\b/g,
   },
   {
+    name: 'mailchimpKey',
+    label: '[API_KEY]',
+    // Mailchimp API keys are 32 lowercase hex characters followed by a
+    // data-centre suffix such as -us14. The suffix is what makes the shape
+    // distinctive: a bare 32-character hex string is just as likely to be a
+    // hash, so it is left untouched. Runs with the other token patterns,
+    // before genericApiKey, so `api_key = <key>` is reported as this type.
+    regex: /\b[0-9a-f]{32}-us\d{1,2}\b/g,
+  },
+  {
     name: 'githubToken',
     label: '[TOKEN]',
     // Classic tokens: ghp_/gho_/ghu_/ghs_/ghr_ + 20 or more alphanumerics.
