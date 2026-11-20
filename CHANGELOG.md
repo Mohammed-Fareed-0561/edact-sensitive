@@ -35,6 +35,10 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Mailchimp API keys (`<32 hex>-us<1-2 digits>`) are now redacted as
   `[API_KEY]`; a bare 32-character hex string is left untouched
   ([#44](https://github.com/sharkohark1234/redact-sensitive/issues/44)).
+- CI now runs `npm test` on Node 16, 20 and 22 plus ESM (`.mjs`) and CJS
+  (`.cjs`) smoke scripts, so a change breaking one loading style fails in
+  CI instead of in a user's app
+  ([#59](https://github.com/sharkohark1234/redact-sensitive/issues/59)).
 
 ### Fixed
 
