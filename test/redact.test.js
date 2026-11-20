@@ -927,3 +927,56 @@ test('classic GitHub tokens still redact beside fine-grained ones', () => {
   );
 });
 
+// Placeholder-only URLs, assembled so no key-shaped literal is committed.
+const webhook = (host = 'hooks.slack.com') =>
+  `https://${host}/services/T00000000/B00000000/${'X'.repeat(24)}`;
+
+test('redacts Slack incoming webhooks, including GovSlack', () => {
+  assert.equal(redact(webhook()), '[WEBHOOK]');
+  assert.equal(redact(webhook('hooks.slack-gov.com')), '[WEBHOOK]');
+});
+
+test('preserves ordinary Slack links and other hosts', () => {
+  for (const text of [
+    'https://slack.com/features',
+    'https://hooks.slack.com/',
+    'https://hooks.slack.com/services/T00000000/B00000000',
+    'https://example.com/services/TEAM/CHANNEL/PLACEHOLDER',
+    webhook('hooks.slack.com.example.com'),
+    webhook('not-hooks.slack.com'),
+  ]) {
+    assert.equal(redact(text), text);
+    assert.deepEqual(findSensitive(text), []);
+  }
+});
+
+test('redacts each webhook without consuming log punctuation', () => {
+  const text = `Notify <${webhook()}>, retry (${webhook('hooks.slack-gov.com')}).`;
+  assert.equal(redact(text), 'Notify <[WEBHOOK]>, retry ([WEBHOOK]).');
+});
+
+test('redacts webhook strings inside nested log records', () => {
+  const records = { records: [{ destination: webhook() }, [webhook()]] };
+  assert.deepEqual(redactObject(records), {
+    records: [{ destination: '[WEBHOOK]' }, ['[WEBHOOK]']],
+  });
+});
+
+test('Slack webhook redaction honours pattern filters and replacement labels', () => {
+  const url = webhook();
+  assert.equal(redact(url, { only: ['slackWebhook'] }), '[WEBHOOK]');
+  assert.equal(redact(url, { except: ['slackWebhook'] }), url);
+  assert.equal(redact(url, { only: ['email'] }), url);
+  assert.equal(redact(url, { labels: { slackWebhook: '[SLACK]' } }), '[SLACK]');
+  assert.equal(redact(url, {
+    labels: { slackWebhook: '[SLACK]' }, keepLabels: false, replacement: '***',
+  }), '***');
+});
+
+test('findSensitive reports webhook type, full value, and log offset', () => {
+  const url = webhook();
+  assert.deepEqual(findSensitive(`send ${url}`, { only: ['slackWebhook'] }), [
+    { type: 'slackWebhook', value: url, index: 5 },
+  ]);
+  assert.deepEqual(findSensitive(url, { except: ['slackWebhook'] }), []);
+});

@@ -195,6 +195,14 @@ const PATTERNS = [
     replacement: '$1[PASSWORD]$3',
   },
   {
+    name: 'slackWebhook',
+    label: '[WEBHOOK]',
+    // Incoming webhook URLs contain the bearer secret in their three-part
+    // /services/ path. Match only Slack's webhook hosts (including GovSlack),
+    // so ordinary Slack pages and similarly named hosts stay readable.
+    regex: /\bhttps:\/\/hooks\.slack(?:-gov)?\.com\/services\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+/gi,
+  },
+  {
     name: 'urlQuerySecret',
     label: '[REDACTED]',
     // Secrets passed as URL query values: ?token=abc123&user=ana redacts
