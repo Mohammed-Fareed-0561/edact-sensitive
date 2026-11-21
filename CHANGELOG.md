@@ -45,6 +45,11 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- A host that merely contains "sentry" inside another label
+  (`notsentry.example.com`) is no longer misclassified as a Sentry DSN:
+  "sentry" must now be a whole dot-separated host label, so the key falls
+  back to the email pattern instead
+  ([#66](https://github.com/sharkohark1234/redact-sensitive/issues/66)).
 - The API-key patterns now cover newer token formats: Stripe restricted keys
   (`rk_live_...`, `rk_test_...`), OpenAI service account keys (`sk-svcacct-...`),
   Slack `xoxe-...` tokens and AWS temporary session keys (`ASIA...`)
