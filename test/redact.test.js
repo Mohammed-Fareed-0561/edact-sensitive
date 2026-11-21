@@ -900,6 +900,19 @@ test('a URL with userinfo but no numeric project id is not mistaken for a DSN', 
   assert.equal(redact('https://user@example.com/path'), 'https://[EMAIL]/path');
 });
 
+test('a host that merely contains "sentry" is not a DSN', () => {
+  // "notsentry" is one label, not the "sentry" label: the key falls back
+  // to the email pattern, which redacts the whole address as an email.
+  assert.equal(
+    redact('see https://publickey@notsentry.example.com/42 end'),
+    'see https://[EMAIL]/42 end'
+  );
+  assert.equal(
+    redact('see https://publickey@sentry.example.com/42 end'),
+    'see https://[DSN]@sentry.example.com/42 end'
+  );
+});
+
 
 // --- Issue #36: GitHub fine-grained personal access tokens (github_pat_...) ---
 
