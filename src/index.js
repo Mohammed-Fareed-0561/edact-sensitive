@@ -296,6 +296,14 @@ const PATTERNS = [
     regex: /\b(?:(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})\b/g,
   },
   {
+    name: 'huggingFaceToken',
+    label: '[TOKEN]',
+    // Hugging Face user and organisation tokens: the literal `hf_` prefix
+    // followed by 34 alphanumeric characters. The exact body length keeps
+    // short placeholder strings such as `hf_example` untouched.
+    regex: /\bhf_[A-Za-z0-9]{34}\b/g,
+  },
+  {
     name: 'slackToken',
     label: '[TOKEN]',
     // Slack tokens use several prefixes: xoxb/xoxa/xoxp/xoxr/xoxs (classic)

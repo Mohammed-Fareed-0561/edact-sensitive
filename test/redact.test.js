@@ -1027,3 +1027,36 @@ test('mailchimpKey honours pattern filters and labels', () => {
   assert.equal(redact(key, { labels: { mailchimpKey: '[MC]' } }), '[MC]');
   assert.equal(redact(key, { keepLabels: false, replacement: '***' }), '***');
 });
+
+// --- Issue #50: Hugging Face tokens (hf_...) ---
+
+// Obvious placeholder assembled at runtime so no token-shaped literal is
+// committed: `hf_` followed by the documented 34-character body.
+const hfToken = () => `hf_${'a'.repeat(34)}`;
+
+test('redacts a Hugging Face token as a token', () => {
+  const token = hfToken();
+  assert.equal(redact(`token ${token}`), 'token [TOKEN]');
+  const found = findSensitive(`token ${token}`);
+  assert.ok(found.some((f) => f.type === 'huggingFaceToken' && f.value === token));
+});
+
+test('short hf_ strings and near misses stay untouched', () => {
+  for (const text of [
+    'hf_short',
+    'hf_example',
+    `hf_${'a'.repeat(33)}`,
+    'see hf_ in the docs',
+  ]) {
+    assert.equal(redact(text), text);
+    assert.deepEqual(findSensitive(text, { only: ['huggingFaceToken'] }), []);
+  }
+});
+
+test('huggingFaceToken honours pattern filters and labels', () => {
+  const token = hfToken();
+  assert.equal(redact(token, { except: ['huggingFaceToken'] }), token);
+  assert.equal(redact(token, { only: ['huggingFaceToken'] }), '[TOKEN]');
+  assert.equal(redact(token, { labels: { huggingFaceToken: '[HF]' } }), '[HF]');
+  assert.equal(redact(token, { keepLabels: false, replacement: '***' }), '***');
+});
