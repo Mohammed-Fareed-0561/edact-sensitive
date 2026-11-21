@@ -7,6 +7,9 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Hugging Face user and organisation tokens (`hf_…`) are now redacted as
+  `[TOKEN]`
+  ([#50](https://github.com/sharkohark1234/redact-sensitive/issues/50)).
 - Benchmark script: `npm run bench` times `redact()` and
   `findSensitive()` over a 10,000-line synthetic log
   ([#57](https://github.com/sharkohark1234/redact-sensitive/issues/57)).
