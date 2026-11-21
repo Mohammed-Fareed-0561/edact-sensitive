@@ -249,12 +249,14 @@ const PATTERNS = [
     name: 'sentryDsn',
     label: '[DSN]',
     // A Sentry DSN is https://<public-key>@<sentry-host>/<numeric-project-id>.
-    // The host contains "sentry" (ingest.sentry.io, regional subdomains such
-    // as ingest.us.sentry.io, or a self-hosted sentry.example.com). Running
-    // before `email` so the key is redacted as a DSN instead of being mangled
-    // by the email pattern, which would also hide the host. Only the key is
+    // The host has "sentry" as a whole dot-separated label (ingest.sentry.io,
+    // regional subdomains such as ingest.us.sentry.io, or a self-hosted
+    // sentry.example.com) — a host that merely contains "sentry" inside
+    // another label (notsentry.example.com) is not a DSN. Running before
+    // `email` so the key is redacted as a DSN instead of being mangled by
+    // the email pattern, which would also hide the host. Only the key is
     // replaced; scheme, host and project id stay readable.
-    regex: /\b(https?:\/\/)([^/\s:@]+)@([^\s/@]*sentry[^\s/@]*)\/(\d+)/gi,
+    regex: /\b(https?:\/\/)([^/\s:@]+)@((?:[A-Za-z0-9-]+\.)*sentry(?:\.[A-Za-z0-9-]+)*)\/(\d+)/gi,
     // Receives the effective label as an extra final argument from redact(),
     // so keepLabels / options.labels are honoured here too.
     replacement: (match, scheme, key, host, projectId, _offset, _string, label) =>
