@@ -13,6 +13,10 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Benchmark script: `npm run bench` times `redact()` and
   `findSensitive()` over a 10,000-line synthetic log
   ([#57](https://github.com/sharkohark1234/redact-sensitive/issues/57)).
+- The benchmark script now fails loudly when redaction breaks: it asserts
+  the redacted output contains no `@example.com` or `4111 1111 1111 1111`
+  and that `findSensitive()` found matches
+  ([#67](https://github.com/sharkohark1234/redact-sensitive/issues/67)).
 - Stripe secret keys (`sk_live_...`, `sk_test_...`) are now redacted as
   `[API_KEY]` ([#17](https://github.com/sharkohark1234/redact-sensitive/issues/17)).
 - `aws_secret_access_key` and `secret_access_key` values are now redacted by
@@ -79,4 +83,5 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `Authorization` headers, and `key = value` secrets.
 - `redact()`, `redactObject()` and `findSensitive()`, with `only` / `except` /
   `labels` / `custom` options and TypeScript types.
+
 
