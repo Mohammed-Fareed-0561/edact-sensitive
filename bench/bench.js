@@ -7,6 +7,7 @@
 // sk_live_..., AIza...). Never put a realistic-looking secret in here —
 // GitHub secret scanning would flag it.
 
+const assert = require('node:assert');
 const { redact, findSensitive } = require('../src/index.js');
 
 const LINE_COUNT = 10000;
@@ -51,6 +52,23 @@ function main() {
   const found = time('findSensitive()', () => findSensitive(log), LINE_COUNT);
   console.log(`redact() output: ${redacted.length.toLocaleString('en-US')} chars`);
   console.log(`findSensitive() matches: ${found.length}`);
+  // Fail loudly if redaction broke: the timed runs above are useless if
+  // they silently pass over unredacted data. (Check the full spaced card
+  // number, not bare "4111": the heartbeat template prints the loop counter,
+  // so 4111 legitimately appears on its own as e.g. "heartbeat 4111 ok".)
+  assert(
+    !redacted.includes('@example.com'),
+    'bench: redacted output still contains @example.com (email pattern broken?)',
+  );
+  assert(
+    !redacted.includes('4111 1111 1111 1111'),
+    'bench: redacted output still contains the card number (credit-card pattern broken?)',
+  );
+  assert(
+    found.length > 0,
+    'bench: findSensitive() found no matches (detection broken?)',
+  );
 }
 
 main();
+
