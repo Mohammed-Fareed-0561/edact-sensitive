@@ -7,6 +7,9 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Benchmark script: `npm run bench` times `redact()` and
+  `findSensitive()` over a 10,000-line synthetic log
+  ([#57](https://github.com/sharkohark1234/redact-sensitive/issues/57)).
 - Stripe secret keys (`sk_live_...`, `sk_test_...`) are now redacted as
   `[API_KEY]` ([#17](https://github.com/sharkohark1234/redact-sensitive/issues/17)).
 - `aws_secret_access_key` and `secret_access_key` values are now redacted by
