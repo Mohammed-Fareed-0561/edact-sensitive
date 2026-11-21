@@ -37,13 +37,17 @@ redact('Card 4111 1111 1111 1111, key sk-abcdefghij1234567890abcd');
 <tr><td>Phone</td><td>+1 555-123-4567 → [PHONE]</td></tr>
 <tr><td>Credit card</td><td>Luhn-validated → [CARD]</td></tr>
 <tr><td>IBAN</td><td>Country length and checksum validated, DE89 3704 0044 0532 0130 00 → [IBAN]</td></tr>
-<tr><td>API keys</td><td>GitHub, OpenAI, Stripe, AWS, Slack tokens</td></tr>
+<tr><td>API keys</td><td>GitHub, OpenAI, Stripe, AWS, Slack tokens, Mailchimp keys</td></tr>
 <tr><td>JWT</td><td>eyJ… → [TOKEN]</td></tr>
+<tr><td>Sentry DSN</td><td>https://key@o1.ingest.sentry.io/42 → key only → [DSN]</td></tr>
+<tr><td>Slack incoming webhooks</td><td>https://hooks.slack.com/services/… → [WEBHOOK]</td></tr>
 <tr><td>Private key blocks</td><td>-----BEGIN PRIVATE KEY----- (also ENCRYPTED, RSA, EC, … and truncated blocks with no END line) → [PRIVATE_KEY]</td></tr>
 <tr><td>SSN, IPv4, URL passwords</td><td>123-45-6789, 203.0.113.42, user:pass@host</td></tr>
 <tr><td>Indian PAN</td><td>ABCDE1234F → [PAN]</td></tr>
 <tr><td>URL query-string secrets</td><td>?token=abc123&amp;user=ana → ?token=[TOKEN]&amp;user=ana</td></tr>
 <tr><td>Authorization headers</td><td>Authorization: Bearer abc → Authorization: Bearer [TOKEN]; Basic … → [CREDENTIALS]</td></tr>
+<tr><td>Session cookies</td><td>Cookie: session=&lt;id&gt;; theme=dark → session=[TOKEN]</td></tr>
+<tr><td>Connection strings</td><td>mongodb://user:pass@host → password only → [PASSWORD]</td></tr>
 <tr><td>key = value secrets</td><td>api_key = …, aws_secret_access_key = … → api_key = [API_KEY]</td></tr>
 </table>
 <h2>Why</h2>
