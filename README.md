@@ -147,6 +147,8 @@ This is a safety net, not a guarantee. No pattern list can catch every secret in
 
 Contributions are welcome — especially new redaction patterns. See [CONTRIBUTING.md](CONTRIBUTING.md). Good first issues are labelled `good first issue`.
 
+Run the benchmark with `npm run bench`.
+
 ## Contributors
 
 redact-sensitive exists thanks to everyone who has contributed code, fixes and ideas — this wall grows on its own as new pull requests land:
