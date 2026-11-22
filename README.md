@@ -14,6 +14,8 @@ redact('Card 4111 1111 1111 1111, key sk-abcdefghij1234567890abcd');
 // 'Card [CARD], key [API_KEY]'
 ```
 
+Try it in your browser — no install needed: the [interactive playground](https://sharkohark1234.github.io/redact-sensitive/playground.html).
+
 ## Why
 
 Logs, error reports and support tickets routinely leak the very data they were meant to debug. One `console.log(user)` can put an email, a token or a card number into a log store, a crash report or a shared screenshot. `redact-sensitive` is a one-line safety net: run untrusted text through it before logging, storing or sending it anywhere.
