@@ -49,6 +49,10 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   (`.cjs`) smoke scripts, so a change breaking one loading style fails in
   CI instead of in a user's app
   ([#59](https://github.com/sharkohark1234/redact-sensitive/issues/59)).
+- Added an interactive playground page (`docs/playground.html`) that
+  redacts text live in the browser using the library source directly,
+  with no build step and no network calls; the landing page now links
+  to it ([#61](https://github.com/sharkohark1234/redact-sensitive/issues/61)).
 
 ### Fixed
 
@@ -83,5 +87,6 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `Authorization` headers, and `key = value` secrets.
 - `redact()`, `redactObject()` and `findSensitive()`, with `only` / `except` /
   `labels` / `custom` options and TypeScript types.
+
 
 
