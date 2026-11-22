@@ -110,6 +110,60 @@ findSensitive('mail a@b.com, card 4111111111111111', { only: ['email'] });
 // [{ type: 'email', value: 'a@b.com', index: 5 }]
 ```
 
+## Logging
+
+Plug redact-sensitive into your logger so secrets never reach the log store.
+`redact-sensitive` itself stays zero-dependency — Winston and Pino are only
+needed in your app, not by this package.
+
+### Winston
+
+Add a format that redacts the message and any attached meta before the log
+reaches a transport. Note the extra `()` — `format(fn)` returns a factory,
+so call it to get the format instance:
+
+```js
+const { createLogger, format, transports } = require('winston');
+const { redactObject } = require('redact-sensitive');
+
+// Redact the message and any attached meta before the log reaches a transport:
+const redactFormat = format((info) => redactObject(info))();
+
+const logger = createLogger({
+  format: format.combine(redactFormat, format.simple()),
+  transports: [new transports.Console()],
+});
+
+logger.info('Signed up ana@example.com with key sk-abcdefghij1234567890abcd', {
+  user: 'ana@example.com',
+});
+// info: Signed up [EMAIL] with key [API_KEY] {"user":"[EMAIL]"}
+```
+
+### Pino
+
+Use the `logMethod` hook to redact every argument before Pino serialises it:
+
+```js
+const pino = require('pino');
+const { redact, redactObject } = require('redact-sensitive');
+
+// Redact every argument before Pino serialises it:
+const logger = pino({
+  hooks: {
+    logMethod(args, method) {
+      const redacted = args.map((arg) =>
+        typeof arg === 'string' ? redact(arg) : redactObject(arg)
+      );
+      return method.apply(this, redacted);
+    },
+  },
+});
+
+logger.info({ user: 'ana@example.com' }, 'Signed up with key sk-abcdefghij1234567890abcd');
+// {"level":30,"time":...,"user":"[EMAIL]","msg":"Signed up with key [API_KEY]"}
+```
+
 ## What is redacted
 
 | Type | Example |
