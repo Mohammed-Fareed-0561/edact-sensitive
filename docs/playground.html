@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Playground — redact-sensitive</title>
+<meta name="description" content="Try redact-sensitive live in your browser: type or paste text and see emails, phone numbers, API keys, credit cards and other sensitive data redacted instantly. No build step, no network calls, nothing leaves this page.">
+<style>
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:760px;margin:0 auto;padding:48px 20px;color:#111;line-height:1.6}
+h1{font-size:2.2rem;line-height:1.2}
+a{color:#0b5fff}
+textarea{width:100%;min-height:120px;box-sizing:border-box;font:inherit;padding:12px;border:1px solid #ccc;border-radius:8px;resize:vertical}
+pre{background:#111;color:#eee;padding:16px;border-radius:8px;overflow:auto;white-space:pre-wrap;word-break:break-word;min-height:80px}
+button{font:inherit;background:#0b5fff;color:#fff;border:0;padding:8px 14px;border-radius:6px;cursor:pointer;margin:8px 8px 0 0}
+button.secondary{background:#eee;color:#111}
+.note{color:#555;font-size:.9rem}
+</style>
+</head>
+<body>
+<p><a href="index.html">&larr; Back to redact-sensitive</a></p>
+<h1>Playground</h1>
+<p>Type or paste text below and watch it get redacted live. Everything runs locally in your browser using the library source in this repo &mdash; nothing you type leaves this page, and the page makes no network calls.</p>
+<p>
+<button type="button" data-preset="0">Email &amp; phone</button>
+<button type="button" data-preset="1">Card &amp; API key</button>
+<button type="button" data-preset="2">IP &amp; SSN</button>
+<button type="button" class="secondary" id="copy">Copy redacted output</button>
+</p>
+<label for="input"><strong>Input</strong></label>
+<textarea id="input" spellcheck="false"></textarea>
+<p><strong>Redacted output</strong></p>
+<pre id="output" aria-live="polite"></pre>
+<p class="note">All examples use placeholders only &mdash; no real secrets. Try your own text: emails, phone numbers, API keys, card numbers, IBANs, tokens and more get redacted on the spot.</p>
+<!-- Load the library source directly: no build step, no bundler. The tiny
+     `module` shim below is all a plain browser needs, because src/index.js
+     is plain JavaScript that only uses `module.exports` at the very end. -->
+<script>var module = { exports: {} };</script>
+<script src="../src/index.js"></script>
+<script>
+(function () {
+  var input = document.getElementById('input');
+  var output = document.getElementById('output');
+  var presets = [
+    'Contact me at ana@example.com or 555-123-4567',
+    'Card 4111 1111 1111 1111, key sk-abcdefghij1234567890abcd',
+    'Server is 203.0.113.42, my SSN is 123-45-6789'
+  ];
+  var redact = window.module && window.module.exports && window.module.exports.redact;
+  function update() {
+    if (typeof redact !== 'function') {
+      output.textContent = 'Could not load the library (../src/index.js). Open this page from inside the repo, next to src/.';
+      return;
+    }
+    output.textContent = redact(input.value);
+  }
+  input.addEventListener('input', update);
+  var buttons = document.querySelectorAll('[data-preset]');
+  for (var i = 0; i < buttons.length; i++) {
+    buttons[i].addEventListener('click', function () {
+      input.value = presets[Number(this.getAttribute('data-preset'))];
+      update();
+      input.focus();
+    });
+  }
+  document.getElementById('copy').addEventListener('click', function () {
+    var text = output.textContent;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text);
+    } else {
+      var range = document.createRange();
+      range.selectNodeContents(output);
+      var selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      document.execCommand('copy');
+      selection.removeAllRanges();
+    }
+  });
+  input.value = presets[0];
+  update();
+})();
+</script>
+</body>
+</html>
