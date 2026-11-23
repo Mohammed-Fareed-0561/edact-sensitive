@@ -164,6 +164,30 @@ logger.info({ user: 'ana@example.com' }, 'Signed up with key sk-abcdefghij123456
 // {"level":30,"time":...,"user":"[EMAIL]","msg":"Signed up with key [API_KEY]"}
 ```
 
+## TypeScript
+
+Types ship with the package — no `@types/redact-sensitive` install needed.
+Import the functions and the types straight from `redact-sensitive`:
+
+```ts
+import { redact, redactObject, findSensitive } from 'redact-sensitive';
+import type { RedactOptions, SensitiveMatch } from 'redact-sensitive';
+
+const options: RedactOptions = { only: ['email'] };
+
+const safe: string = redact('Contact ana@example.com', options);
+// 'Contact [EMAIL]'
+
+const payload = redactObject({ user: 'ana@example.com', tags: ['x@y.com'] });
+// { user: '[EMAIL]', tags: ['[EMAIL]'] }
+
+const found: SensitiveMatch[] = findSensitive('mail a@b.com');
+// [{ type: 'email', value: 'a@b.com', index: 5 }]
+```
+
+`redactObject` keeps the type of the value you pass in, so the redacted
+object has the same shape as the original.
+
 ## What is redacted
 
 | Type | Example |
