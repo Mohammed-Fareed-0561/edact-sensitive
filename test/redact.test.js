@@ -1167,3 +1167,55 @@ test('digitalOceanToken honours pattern filters and replacement labels', () => {
   ]);
   assert.deepEqual(findSensitive(token, { except: ['digitalOceanToken'] }), []);
 });
+
+// Synthetic tokens in the formats accepted by the Supabase CLI.
+for (const prefix of ['sbp_', 'sbp_oauth_', 'sbp_v0_']) {
+  test(`redacts Supabase access tokens with the ${prefix} prefix`, () => {
+    const token = prefix + '0123456789abcdef'.repeat(2) + '01234567';
+    assert.equal(redact(token), '[TOKEN]');
+    assert.equal(redact(`Using (${token}), retry later.`), 'Using ([TOKEN]), retry later.');
+    assert.deepEqual(findSensitive(`using ${token}`), [
+      { type: 'supabaseToken', value: token, index: 6 },
+    ]);
+  });
+}
+
+test('Supabase token near misses stay untouched', () => {
+  const body = 'a'.repeat(40);
+  const inputs = [body, 'SBP_' + body, 'sbp_v1_' + body, 'sbp_other_' + body];
+  for (const prefix of ['sbp_', 'sbp_oauth_', 'sbp_v0_']) {
+    inputs.push(prefix, prefix + 'short', prefix + 'a'.repeat(39), prefix + body + 'a');
+    inputs.push(prefix + 'a'.repeat(39) + 'g', prefix + 'A'.repeat(40));
+    inputs.push('x' + prefix + body, '_' + prefix + body, prefix + body + '_suffix');
+  }
+  for (const input of inputs) {
+    assert.equal(redact(input), input);
+    assert.deepEqual(findSensitive(input), []);
+  }
+});
+
+test('redacts multiple Supabase tokens in text and nested records', () => {
+  const tokens = ['sbp_', 'sbp_oauth_', 'sbp_v0_'].map((prefix) => prefix + 'a'.repeat(40));
+  const text = tokens.join(', ') + '.';
+  assert.equal(redact(text), '[TOKEN], [TOKEN], [TOKEN].');
+  assert.deepEqual(findSensitive(text), tokens.map((token) => ({
+    type: 'supabaseToken', value: token, index: text.indexOf(token),
+  })));
+  assert.deepEqual(redactObject({ records: tokens.map((message) => ({ message })) }), {
+    records: [{ message: '[TOKEN]' }, { message: '[TOKEN]' }, { message: '[TOKEN]' }],
+  });
+});
+
+test('supabaseToken honours pattern filters and replacement labels', () => {
+  const token = 'sbp_' + 'a'.repeat(40);
+  assert.equal(redact(token, { only: ['supabaseToken'] }), '[TOKEN]');
+  assert.equal(redact(token, { except: ['supabaseToken'] }), token);
+  assert.equal(redact(token, { labels: { supabaseToken: '[SUPABASE]' } }), '[SUPABASE]');
+  assert.equal(redact(token, {
+    labels: { supabaseToken: '[SUPABASE]' }, keepLabels: false, replacement: '***',
+  }), '***');
+  assert.deepEqual(findSensitive(token, { only: ['supabaseToken'] }), [
+    { type: 'supabaseToken', value: token, index: 0 },
+  ]);
+  assert.deepEqual(findSensitive(token, { except: ['supabaseToken'] }), []);
+});

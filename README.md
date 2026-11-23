@@ -201,6 +201,7 @@ object has the same shape as the original.
 | JWT | `eyJ…` → `[TOKEN]` |
 | GitLab access tokens (`gitlabToken`) | `glpat-` + 20 or more base64url characters → `[TOKEN]` |
 | DigitalOcean tokens (`digitalOceanToken`) | `dop_v1_`, `doo_v1_` or `dor_v1_` + 64 hex characters → `[TOKEN]` |
+| Supabase access tokens (`supabaseToken`) | `sbp_`, `sbp_oauth_` or `sbp_v0_` + 40 lowercase hex characters → `[TOKEN]` |
 | Slack incoming webhooks | `https://hooks.slack.com/services/…` (also `hooks.slack-gov.com`) → `[WEBHOOK]` |
 | Private key blocks | `-----BEGIN PRIVATE KEY-----` (also `ENCRYPTED`, `RSA`, `EC`, … and truncated blocks with no `END` line) → `[PRIVATE_KEY]` |
 | SSN | `123-45-6789` → `[SSN]` |
