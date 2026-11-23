@@ -29,8 +29,8 @@ table{border-collapse:collapse;width:100%}td,th{border:1px solid #ddd;padding:8p
 redact('Contact me at ana@example.com or 555-123-4567');
 // 'Contact me at [EMAIL] or [PHONE]'
 
-redact('Card 4111 1111 1111 1111, key sk-abcdefghij1234567890abcd');
-// 'Card [CARD], key [API_KEY]'</code></pre>
+redact('Card 4111 1111 1111 1111, api_key = abc123secret');
+// 'Card [CARD], api_key = [API_KEY]'</code></pre>
 <h2>What it redacts</h2>
 <table>
 <tr><th>Type</th><th>Example</th></tr>
