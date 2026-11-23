@@ -296,6 +296,13 @@ const PATTERNS = [
     regex: /\b(?:(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})\b/g,
   },
   {
+    name: 'gitlabToken',
+    label: '[TOKEN]',
+    // GitLab's default glpat- prefix followed by 20+ base64url characters.
+    // Consume the full body, including trailing hyphens.
+    regex: /\bglpat-[A-Za-z0-9_-]{20,}/g,
+  },
+  {
     name: 'huggingFaceToken',
     label: '[TOKEN]',
     // Hugging Face user and organisation tokens: the literal `hf_` prefix

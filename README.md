@@ -199,6 +199,7 @@ object has the same shape as the original.
 | IBAN | Country length and checksum validated, `DE89 3704 0044 0532 0130 00` → `[IBAN]` |
 | API keys | GitHub `ghp_…` / `github_pat_…`, Hugging Face `hf_…`, OpenAI `sk-…` / `sk-proj-…` / `sk-svcacct-…`, Stripe `sk_live_…` / `sk_test_…` / `rk_live_…` / `rk_test_…`, AWS `AKIA…` / `ASIA…`, Mailchimp `<32 hex>-us14`, Slack `xoxb-…` / `xoxe-…` → `[TOKEN]` / `[API_KEY]` |
 | JWT | `eyJ…` → `[TOKEN]` |
+| GitLab access tokens (`gitlabToken`) | `glpat-` + 20 or more base64url characters → `[TOKEN]` |
 | Slack incoming webhooks | `https://hooks.slack.com/services/…` (also `hooks.slack-gov.com`) → `[WEBHOOK]` |
 | Private key blocks | `-----BEGIN PRIVATE KEY-----` (also `ENCRYPTED`, `RSA`, `EC`, … and truncated blocks with no `END` line) → `[PRIVATE_KEY]` |
 | SSN | `123-45-6789` → `[SSN]` |
