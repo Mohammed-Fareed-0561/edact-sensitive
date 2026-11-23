@@ -343,6 +343,16 @@ test('options.labels applies to urlPassword and genericApiKey too', () => {
   );
 });
 
+// The README and landing page show this exact example, so pin it: a short
+// placeholder such as `sk-...` would not be redacted at all, but a
+// `key = value` secret is.
+test('README example: card and key = value secret redact as documented', () => {
+  assert.equal(
+    redact('Card 4111 1111 1111 1111, api_key = abc123secret'),
+    'Card [CARD], api_key = [API_KEY]'
+  );
+});
+
 // --- Authorization header values in log text ---
 
 test('redacts Bearer and Basic credentials, keeping header name and scheme', () => {
