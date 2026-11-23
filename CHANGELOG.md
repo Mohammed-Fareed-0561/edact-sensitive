@@ -7,6 +7,8 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Supabase access tokens (`sbp_`, `sbp_oauth_`, `sbp_v0_`) are now redacted
+  as `[TOKEN]` ([#49](https://github.com/sharkohark1234/redact-sensitive/issues/49)).
 - DigitalOcean personal access, OAuth access and refresh tokens (`dop_v1_`,
   `doo_v1_`, `dor_v1_`) are now redacted as `[TOKEN]`
   ([#46](https://github.com/sharkohark1234/redact-sensitive/issues/46)).

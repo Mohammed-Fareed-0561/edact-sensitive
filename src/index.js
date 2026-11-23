@@ -318,6 +318,13 @@ const PATTERNS = [
     regex: /\bhf_[A-Za-z0-9]{34}\b/g,
   },
   {
+    name: 'supabaseToken',
+    label: '[TOKEN]',
+    // The CLI accepts sbp_, sbp_oauth_ and sbp_v0_ followed by 40 lowercase
+    // hex characters. Keep incomplete tokens and longer words untouched.
+    regex: /\bsbp_(?:oauth_|v0_)?[a-f0-9]{40}\b/g,
+  },
+  {
     name: 'slackToken',
     label: '[TOKEN]',
     // Slack tokens use several prefixes: xoxb/xoxa/xoxp/xoxr/xoxs (classic)
