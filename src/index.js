@@ -303,6 +303,13 @@ const PATTERNS = [
     regex: /\bglpat-[A-Za-z0-9_-]{20,}/g,
   },
   {
+    name: 'digitalOceanToken',
+    label: '[TOKEN]',
+    // Personal access, OAuth access and refresh tokens use distinct prefixes
+    // followed by 64 hex characters. Do not match short or overlong bodies.
+    regex: /\bdo[por]_v1_[0-9a-fA-F]{64}\b/g,
+  },
+  {
     name: 'huggingFaceToken',
     label: '[TOKEN]',
     // Hugging Face user and organisation tokens: the literal `hf_` prefix

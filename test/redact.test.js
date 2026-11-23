@@ -1111,3 +1111,59 @@ test('gitlabToken honours pattern filters and replacement labels', () => {
   ]);
   assert.deepEqual(findSensitive(token, { except: ['gitlabToken'] }), []);
 });
+
+// Synthetic DigitalOcean tokens; the bodies are assembled only for these tests.
+for (const prefix of ['dop_v1_', 'doo_v1_', 'dor_v1_']) {
+  test(`redacts DigitalOcean tokens with the ${prefix} prefix`, () => {
+    for (const body of ['0123456789abcdef'.repeat(4), 'ABCDEF0123456789'.repeat(4)]) {
+      const token = prefix + body;
+      assert.equal(redact(token), '[TOKEN]');
+      assert.equal(redact(`Using (${token}), retry later.`), 'Using ([TOKEN]), retry later.');
+      assert.deepEqual(findSensitive(`using ${token}`), [
+        { type: 'digitalOceanToken', value: token, index: 6 },
+      ]);
+    }
+  });
+}
+
+test('DigitalOcean token near misses stay untouched', () => {
+  const body = 'a'.repeat(64);
+  const inputs = [
+    body,
+    'dox_v1_' + body,
+    'dop_v2_' + body,
+    'DOP_v1_' + body,
+    'xdop_v1_' + body,
+    '_dop_v1_' + body,
+  ];
+  for (const prefix of ['dop_v1_', 'doo_v1_', 'dor_v1_']) {
+    inputs.push(prefix, prefix + 'short', prefix + 'a'.repeat(63), prefix + body + 'a');
+    inputs.push(prefix + 'a'.repeat(63) + 'g', prefix + body + '_suffix');
+  }
+  for (const input of inputs) {
+    assert.equal(redact(input), input);
+    assert.deepEqual(findSensitive(input), []);
+  }
+});
+
+test('redacts multiple DigitalOcean tokens in log text and nested records', () => {
+  const tokens = ['dop_v1_', 'doo_v1_', 'dor_v1_'].map((prefix) => prefix + 'a'.repeat(64));
+  assert.equal(redact(tokens.join(', ') + '.'), '[TOKEN], [TOKEN], [TOKEN].');
+  assert.deepEqual(redactObject({ records: tokens.map((message) => ({ message })) }), {
+    records: [{ message: '[TOKEN]' }, { message: '[TOKEN]' }, { message: '[TOKEN]' }],
+  });
+});
+
+test('digitalOceanToken honours pattern filters and replacement labels', () => {
+  const token = 'dop_v1_' + 'a'.repeat(64);
+  assert.equal(redact(token, { only: ['digitalOceanToken'] }), '[TOKEN]');
+  assert.equal(redact(token, { except: ['digitalOceanToken'] }), token);
+  assert.equal(redact(token, { labels: { digitalOceanToken: '[DIGITALOCEAN]' } }), '[DIGITALOCEAN]');
+  assert.equal(redact(token, {
+    labels: { digitalOceanToken: '[DIGITALOCEAN]' }, keepLabels: false, replacement: '***',
+  }), '***');
+  assert.deepEqual(findSensitive(token, { only: ['digitalOceanToken'] }), [
+    { type: 'digitalOceanToken', value: token, index: 0 },
+  ]);
+  assert.deepEqual(findSensitive(token, { except: ['digitalOceanToken'] }), []);
+});
