@@ -7,6 +7,8 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- GitLab access tokens using the default `glpat-` prefix are now redacted
+  as `[TOKEN]` ([#47](https://github.com/sharkohark1234/redact-sensitive/issues/47)).
 - Hugging Face user and organisation tokens (`hf_…`) are now redacted as
   `[TOKEN]`
   ([#50](https://github.com/sharkohark1234/redact-sensitive/issues/50)).

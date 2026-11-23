@@ -1070,3 +1070,44 @@ test('huggingFaceToken honours pattern filters and labels', () => {
   assert.equal(redact(token, { labels: { huggingFaceToken: '[HF]' } }), '[HF]');
   assert.equal(redact(token, { keepLabels: false, replacement: '***' }), '***');
 });
+
+// Synthetic token bodies only; no live credentials are used in these tests.
+test('redacts GitLab access tokens, including full base64url bodies', () => {
+  const bodies = ['a'.repeat(20), 'Ab0_'.repeat(5), 'Ab0-'.repeat(5), 'Ab0_-'.repeat(8)];
+  for (const body of bodies) {
+    const token = 'glpat-' + body;
+    assert.equal(redact(token), '[TOKEN]');
+    assert.equal(redact(`Using (${token}), retry later.`), 'Using ([TOKEN]), retry later.');
+    assert.deepEqual(findSensitive(`token ${token}`), [
+      { type: 'gitlabToken', value: token, index: 6 },
+    ]);
+  }
+});
+
+test('GitLab token near misses stay untouched', () => {
+  const inputs = [
+    'glpat-',
+    'glpat-short',
+    'glpat-' + 'a'.repeat(19),
+    'glpat-' + 'a'.repeat(19) + '.suffix',
+    'xglpat-' + 'a'.repeat(20),
+    '_glpat-' + 'a'.repeat(20),
+    'GLPAT-' + 'a'.repeat(20),
+  ];
+  for (const input of inputs) {
+    assert.equal(redact(input), input);
+    assert.deepEqual(findSensitive(input), []);
+  }
+});
+
+test('gitlabToken honours pattern filters and replacement labels', () => {
+  const token = 'glpat-' + 'a'.repeat(20);
+  assert.equal(redact(token, { except: ['gitlabToken'] }), token);
+  assert.equal(redact(token, { only: ['gitlabToken'] }), '[TOKEN]');
+  assert.equal(redact(token, { labels: { gitlabToken: '[GITLAB]' } }), '[GITLAB]');
+  assert.equal(redact(token, { keepLabels: false, replacement: '***' }), '***');
+  assert.deepEqual(findSensitive(token, { only: ['gitlabToken'] }), [
+    { type: 'gitlabToken', value: token, index: 0 },
+  ]);
+  assert.deepEqual(findSensitive(token, { except: ['gitlabToken'] }), []);
+});
