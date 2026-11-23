@@ -10,8 +10,8 @@ const { redact } = require('redact-sensitive');
 redact('Contact me at ana@example.com or 555-123-4567');
 // 'Contact me at [EMAIL] or [PHONE]'
 
-redact('Card 4111 1111 1111 1111, key sk-...');
-// 'Card [CARD], key [API_KEY]'
+redact('Card 4111 1111 1111 1111, api_key = abc123secret');
+// 'Card [CARD], api_key = [API_KEY]'
 ```
 
 Try it in your browser — no install needed: the [interactive playground](https://sharkohark1234.github.io/redact-sensitive/playground.html).
@@ -134,10 +134,10 @@ const logger = createLogger({
   transports: [new transports.Console()],
 });
 
-logger.info('Signed up ana@example.com with key sk-...', {
+logger.info('Signed up ana@example.com with api_key = abc123secret', {
   user: 'ana@example.com',
 });
-// info: Signed up [EMAIL] with key [API_KEY] {"user":"[EMAIL]"}
+// info: Signed up [EMAIL] with api_key = [API_KEY] {"user":"[EMAIL]"}
 ```
 
 ### Pino
@@ -160,8 +160,8 @@ const logger = pino({
   },
 });
 
-logger.info({ user: 'ana@example.com' }, 'Signed up with key sk-...');
-// {"level":30,"time":...,"user":"[EMAIL]","msg":"Signed up with key [API_KEY]"}
+logger.info({ user: 'ana@example.com' }, 'Signed up with api_key = abc123secret');
+// {"level":30,"time":...,"user":"[EMAIL]","msg":"Signed up with api_key = [API_KEY]"}
 ```
 
 ## TypeScript
@@ -240,7 +240,6 @@ redact-sensitive exists thanks to everyone who has contributed code, fixes and i
 ## License
 
 MIT. See [LICENSE](LICENSE).
-
 
 
 
