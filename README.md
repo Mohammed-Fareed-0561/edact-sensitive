@@ -10,7 +10,7 @@ const { redact } = require('redact-sensitive');
 redact('Contact me at ana@example.com or 555-123-4567');
 // 'Contact me at [EMAIL] or [PHONE]'
 
-redact('Card 4111 1111 1111 1111, key sk-abcdefghij1234567890abcd');
+redact('Card 4111 1111 1111 1111, key sk-...');
 // 'Card [CARD], key [API_KEY]'
 ```
 
@@ -134,7 +134,7 @@ const logger = createLogger({
   transports: [new transports.Console()],
 });
 
-logger.info('Signed up ana@example.com with key sk-abcdefghij1234567890abcd', {
+logger.info('Signed up ana@example.com with key sk-...', {
   user: 'ana@example.com',
 });
 // info: Signed up [EMAIL] with key [API_KEY] {"user":"[EMAIL]"}
@@ -160,7 +160,7 @@ const logger = pino({
   },
 });
 
-logger.info({ user: 'ana@example.com' }, 'Signed up with key sk-abcdefghij1234567890abcd');
+logger.info({ user: 'ana@example.com' }, 'Signed up with key sk-...');
 // {"level":30,"time":...,"user":"[EMAIL]","msg":"Signed up with key [API_KEY]"}
 ```
 
@@ -240,6 +240,7 @@ redact-sensitive exists thanks to everyone who has contributed code, fixes and i
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
 
 
 
